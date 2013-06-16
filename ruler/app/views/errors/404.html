@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Not found</title>
+</head>
+
+<body>
+{{if eq .RunMode "dev"}}
+{{template "errors/404-dev.html" .}}
+{{else}}
+	{{with .Error}}
+	<h1>
+		{{.Title}}
+	</h1>
+	<p>
+		{{.Description}}
+	</p>
+	{{end}}
+{{end}}
+</body>
+</html>
