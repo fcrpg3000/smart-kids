@@ -203,9 +203,8 @@ var (
 func EducationOf(id int) *Education {
 	if edu, ok := educationMap[id]; ok {
 		return edu
-	} else {
-		return nil
 	}
+	return nil
 }
 
 type Feeling struct {
@@ -243,9 +242,8 @@ var (
 func FeelingOf(id int) *Feeling {
 	if feeling, ok := feelingMap[id]; ok {
 		return feeling
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Returns all feelings
@@ -290,9 +288,8 @@ var (
 func BloodTypeOf(id int) *BloodType {
 	if bloodType, ok := bloodMap[id]; ok {
 		return bloodType
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Returns all BloodType
@@ -351,9 +348,8 @@ var (
 func ConstellationOf(id int) *Constellation {
 	if c, ok := constellationMap[id]; ok {
 		return c
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // Returns all constellation instance.

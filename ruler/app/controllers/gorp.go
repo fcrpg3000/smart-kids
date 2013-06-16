@@ -17,12 +17,10 @@
 package controllers
 
 import (
-	// "code.google.com/p/go.crypto/bcrypt"
 	"database/sql"
 	"github.com/coopernurse/gorp"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/robfig/revel"
-	"github.com/robfig/revel/modules/db/app"
 	"smart-kids/ruler/app/models"
 )
 

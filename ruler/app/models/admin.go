@@ -40,18 +40,16 @@ type Admin struct {
 	LastIp           sql.NullString `db:"last_ip"`
 
 	// Transient
-	Roles []*Role `db:"-"`
+	Password string  `db:"-"` // used in form
+	Roles    []*Role `db:"-"`
 }
 
 // gorp 不能自动处理关联关系，实现这个接口方法，当调用根据Id获取 Admin 对象时，
 // 自动获取关联的角色信息列表
 func (a *Admin) PostGet(exe gorp.SqlExecutor) error {
-	query := "SELECT role_id, role_name, role_code, role_desc, created_by_id, " +
-		"created_by_name, created_time, last_modified_time " +
-		"FROM m_role WHERE role_id IN " +
-		"(SELECT role_id FROM m_admin_role ar JOIN m_admin a " +
-		"ON a.admin_id = ar.admin_id " +
-		"WHERE a.admin_id = ?)"
+	query := baseQueryForRole +
+		"WHERE role_id IN (SELECT role_id FROM m_admin_role ar JOIN m_admin a " +
+		"ON a.admin_id = ar.admin_id WHERE a.admin_id = ?)"
 	objs, err := exe.Select(Role{}, query, a.Id)
 	if err != nil {
 		return fmt.Errorf("Error loading admin's(%d) roles : %s", a.Id, err)
@@ -102,12 +100,12 @@ type Resource struct {
 	Id               int            `db:"res_id"`
 	Name             string         `db:"res_name"`
 	Code             string         `db:"res_code"`
-	Desc             string         `db:"res_desc"`
+	Desc             sql.NullString `db:"res_desc"`
 	Url              string         `db:"res_url"`
 	ParentId         int            `db:"parent_id"`
 	IsMenu           bool           `db:"is_menu"`
 	CreatedById      int            `db:"created_by_id"`
-	CreatedByName    string         `db:"created_by_name"`
+	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
@@ -120,6 +118,12 @@ type Resource struct {
 
 func (r *Resource) PreInsert(_ gorp.SqlExecutor) error {
 	timeNow := time.Now()
+	if !r.Desc.Valid {
+		r.Desc.String = r.Name
+	}
+	if !r.CreatedByName.Valid {
+		r.CreatedByName.String = "System"
+	}
 	r.CreatedTime = mysql.NullTime{timeNow, true}
 	r.LastModifiedTime = mysql.NullTime{timeNow, true}
 	return nil
