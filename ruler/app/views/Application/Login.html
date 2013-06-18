@@ -53,6 +53,7 @@
     <div class="container">
       <form class="form-signin" name="formLogin" method="POST" action="{{url "Application.DoLogin"}}">
         <h2 class="form-signin-heading">输入用户名和密码！</h2>
+        {{template "flash.html" .}}
         <input type="text" class="input-block-level" name="adminName" 
                 value="{{.flash.adminName}}" placeholder="用户名" />
         <input type="password" class="input-block-level" name="password" placeholder="登录密码" />

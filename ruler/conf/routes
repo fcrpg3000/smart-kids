@@ -9,6 +9,11 @@ GET     /login                                  Application.Login
 POST    /do_login                               Application.DoLogin
 GET     /logout                                 Application.Logout
 
+# Administrators
+GET     /admins/admin_list                      Administrators.AdminList
+POST    /admins/disable_admin                   Administrators.DisableAdmin
+GET     /admins/admin_detail                    Administrators.AdminDetail
+
 # Ignore favicon requests
 GET     /favicon.ico                            404
 

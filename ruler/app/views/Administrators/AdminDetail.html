@@ -1,0 +1,52 @@
+{{template "header.html" .}}{{template "flash.html" .}}
+
+<ul class="breadcrumb">
+  <li><a href="{{url "Application.Index"}}">首页</a> <span class="divider">/</span></li>
+  <li><a href="{{url "Administrators.AdminList"}}">管理后台用户</a> <span class="divider">/</span></li>
+  <li class="active">{{if .title}}编辑 {{.admin.AdminName}} 的信息{{else}}创建新的管理员{{end}}</li>
+</ul>
+{{set . "formAction" "/admins/create_admin"}}
+{{if .admin}}{{set . "formAction" "/admins/modify_admin"}}{{end}}
+<div class="row-fluid">
+  <form class="form-horizontal" id="form_edit_admin" name="formEditAdmin" action="{{.formAction}}" method="post">
+  	{{if .admin}}<input type="hidden" name="admin.Id" value="{{.admin.Id}}" />{{end}}
+    <p id="message_tip" class="hide"></p>
+    <div class="control-group">
+        <label class="control-label" for="txt_admin_name">用户名：</label>
+        <div class="controls">
+            <input type="text" id="txt_admin_name" name="admin.AdminName" placeholder="用户名" value="{{.admin.AdminName}}">
+            <span class="help-inline hide" id="help_username">请输入管理员用户名！</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="txt_emp_name">员工名称：</label>
+        <div class="controls">
+            <input type="text" id="txt_emp_name" name="admin.EmpName" placeholder="员工名称" value="{{.admin.EmpName.String}}">
+            <span class="help-inline hide" id="help_emp_name">请输入员工名称！</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="txt_emp_no">员工工号：</label>
+        <div class="controls">
+            <input type="text" id="txt_emp_no" name="admin.EmpNo" placeholder="员工工号" value="{{.admin.EmpNo.String}}">
+            <span class="help-inline hide" id="help_emp_no">请输入员工工号！</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <input type="hidden" id="txt_enabled" name="admin.IsEnabled" value="{{if .admin}}{{.admin.IsEnabled}}{{else}}true{{end}}" />
+            <label class="checkbox">
+                <input type="checkbox" id="chk_enabled"{{if .admin}}{{if .admin.IsEnabled}} checked="checked"{{end}}{{else}} checked="checked"{{end}}/> 立即启用
+            </label>
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <button type="submit" id="btn_edit" class="btn btn-primary">保 存</button>&nbsp;&nbsp;
+            <button type="reset" id="btn_reset" class="btn btn-info">重 置</button>
+        </div>
+    </div>
+  </form>
+</div>
+{{/*--/.admin with--*/}}
+{{template "footer.html" .}}

@@ -6,8 +6,8 @@
 {{if or .errors .flash.error}}
 <div class="alert alert-error">
 	{{if .flash.error}}{{.flash.error}}{{end}}
-	<ul>{{range .errors}}
+	{{if .errors}}<ul>{{range .errors}}
 		<li>{{.}}</li>{{end}}
-	</ul>
+	</ul>{{end}}
 </div>
 {{end}}

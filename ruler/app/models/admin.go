@@ -37,6 +37,7 @@ type Admin struct {
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
+	IsEnabled        bool           `db:"is_enabled"`
 	LastIp           sql.NullString `db:"last_ip"`
 
 	// Transient
