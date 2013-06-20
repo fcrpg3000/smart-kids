@@ -21,9 +21,9 @@ const (
 		"user_id, user_name, emp_name, emp_no, created_by_id, " +
 		"created_by_name, created_time, last_modified_time, " +
 		"is_enabled, last_ip FROM m_admin "
-	baseQueryForRole = "SELECT role_id, role_name, role_code, role_desc, created_by_id, " +
+	BASE_QUERY_ROLE = "SELECT role_id, role_name, role_code, role_desc, created_by_id, " +
 		"created_by_name, created_time, last_modified_time FROM m_role "
 	QUERY_ADMIN_BY_NAME = baseQueryForAdmin + "WHERE admin_name = ?"
-	QUERY_ROLE_BY_NAME  = baseQueryForRole + "WHERE role_name = ?"
-	QUERY_ROLE_BY_CODE  = baseQueryForRole + "WHERE role_code = ?"
+	QUERY_ROLE_BY_NAME  = BASE_QUERY_ROLE + "WHERE role_name = ?"
+	QUERY_ROLE_BY_CODE  = BASE_QUERY_ROLE + "WHERE role_code = ?"
 )

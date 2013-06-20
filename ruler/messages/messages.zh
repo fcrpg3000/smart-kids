@@ -15,7 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-AdminDetail.title=%s(%s,%s) 管理员的详细信息
+AdminDetail.title.creation=创建新的管理员
+AdminDetail.title.edit=%s(%s,%s) 管理员的详细信息
 
 admin.notFound=指定的管理员不存在，或已被系统管理员删除！
 admin.cannotBanSuper=不能禁止系统内置的超级管理员！

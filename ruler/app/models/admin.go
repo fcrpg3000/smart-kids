@@ -48,7 +48,7 @@ type Admin struct {
 // gorp 不能自动处理关联关系，实现这个接口方法，当调用根据Id获取 Admin 对象时，
 // 自动获取关联的角色信息列表
 func (a *Admin) PostGet(exe gorp.SqlExecutor) error {
-	query := baseQueryForRole +
+	query := BASE_QUERY_ROLE +
 		"WHERE role_id IN (SELECT role_id FROM m_admin_role ar JOIN m_admin a " +
 		"ON a.admin_id = ar.admin_id WHERE a.admin_id = ?)"
 	objs, err := exe.Select(Role{}, query, a.Id)

@@ -39,6 +39,21 @@ func (a Administrators) findAdmin(id int) *models.Admin {
 	return obj.(*models.Admin)
 }
 
+func (a Administrators) findRoles() []*models.Role {
+	interfaces, err := a.Txn.Select(models.Role{}, models.BASE_QUERY_ROLE)
+	if err != nil {
+		panic(err)
+	}
+	if len(interfaces) == 0 {
+		return make([]*models.Role, 0)
+	}
+	roles := make([]*models.Role, len(interfaces))
+	for i, obj := range interfaces {
+		roles[i] = obj.(*models.Role)
+	}
+	return roles
+}
+
 func (a Administrators) AdminList(p int) revel.Result {
 
 	return a.Render()
@@ -68,13 +83,35 @@ func (a Administrators) DisableAdmin(id int) revel.Result {
 }
 
 func (a Administrators) AdminDetail(id int) revel.Result {
-	admin := a.findAdmin(id)
-	if admin == nil {
-		//return a.NotFound(a.Message("admin.notFound"))
-		return a.Render()
-	} else {
-		title := a.Message("AdminDetail.title", admin.AdminName,
-			admin.EmpName, admin.EmpNo)
-		return a.Render(title, admin)
+	var admin *models.Admin
+	var roles = make([]*models.Role, 0)
+	allRoles := a.findRoles()
+	if id <= 0 {
+		roles = allRoles
+		title := a.Message("AdminDetail.title.creation")
+		return a.Render(title, roles)
 	}
+	admin = a.findAdmin(id)
+	if admin == nil {
+		roles = allRoles
+		title := a.Message("AdminDetail.title.creation")
+		return a.Render(title, roles)
+	}
+	title := a.Message("AdminDetail.title.edit", admin.AdminName,
+		admin.EmpName, admin.EmpNo)
+	adminRoles := admin.Roles
+	if len(adminRoles) == 0 {
+		roles = allRoles
+	} else {
+	allRoleLabel:
+		for _, role := range allRoles {
+			for _, adminRole := range adminRoles {
+				if role.Id == adminRole.Id {
+					continue allRoleLabel
+				}
+			}
+			roles = append(roles, role)
+		}
+	}
+	return a.Render(title, admin, roles)
 }
