@@ -1,13 +1,7 @@
   <div class="well sidebar-nav">
-    <ul class="nav nav-list">
-  	<li class="nav-header">权限管理</li>
-  	<li class="active"><a href="#">管理员用户列表</a></li>
-  	<li><a href="#">管理员角色列表</a></li>
-  	<li class="nav-header">用户管理</li>
-  	<li><a href="#">所有用户列表</a></li>
-  	<li><a href="#">活跃用户列表</a></li>
-  	<li><a href="#">VIP用户</a></li>
-  	<li><a href="#">付费用户列表</a></li>
-  	<li><a href="#">被禁止的用户</a></li>
+    <ul class="nav nav-list">{{range .mainMenus}}
+      <li class="nav-header">{{.Name}}</li>
+      {{range .Children}}<li><a href="{{.Url}}">{{.Name}}</a></li>{{end}}
+      {{end}}
     </ul>
   </div>{{/*--/.well.sidebar-nav--*/}}

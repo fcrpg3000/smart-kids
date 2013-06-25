@@ -1,0 +1,13 @@
+{{$paginationAlign := .paginationAlign}} {{$pageUrl := .pageUrl}}
+{{with .pagination}} {{$current := .Current}}
+<div class="pagination pagination-small{{if eq $paginationAlign "centered"}} pagination-centered{{end}}{{if eq $paginationAlign "right"}} pagination-right{{end}}">
+<ul>
+  {{if not .HasPrevPage}}<li class="disabled"><a href="#" onclick="return false;"><i class="icon-fast-backward icon-white"></i></a></li>{{else}}
+  <li><a href="{{printf $pageUrl .PrevPage }}"><i class="icon-fast-backward"></i></a></li>{{end}}
+  {{range .PageRange }} {{$tempPageUrl := printf $pageUrl .}}
+  <li{{if eq $current .}} class="active"{{end}}><a href="{{$tempPageUrl}}" title="第{{.}}页"{{if eq $current .}} onclick="return false;"{{end}}>{{.}}</a></li>{{end}}
+  {{if not .HasNextPage}}<li class="disabled"><a href="#" onclick="return false;"><i class="icon-fast-forward icon-white"></i></a></li>{{else}}
+  <li><a href="{{printf $pageUrl .NextPage }}"><i class="icon-fast-forward"></i></a></li>{{end}}
+</ul>
+</div>
+{{end}}

@@ -21,8 +21,20 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/robfig/revel"
+	_ "log"
 	"smart-kids/ruler/app/models"
 	"smart-kids/ruler/app/routes"
+)
+
+const (
+	DEFAULT_PAGE_SIZE = 10
+)
+
+var (
+	sqlMainMenus = fmt.Sprintf("%s WHERE parent_id = -1 and top_id = -1",
+		models.BASE_QUERY_RESOURCE)
+	sqlSubMenus = fmt.Sprintf("%s WHERE is_menu = 1 and parent_id > 0 ORDER BY res_url ASC",
+		models.BASE_QUERY_RESOURCE)
 )
 
 type Application struct {
@@ -78,14 +90,14 @@ func (c Application) Logout() revel.Result {
 
 func (c Application) AddAdmin() revel.Result {
 	if admin := c.connected(); admin != nil {
-		c.RenderArgs["admin"] = admin
+		c.RenderArgs["adminUser"] = admin
 	}
 	return nil
 }
 
 func (c Application) connected() *models.Admin {
-	if c.RenderArgs["admin"] != nil {
-		return c.RenderArgs["admin"].(*models.Admin)
+	if c.RenderArgs["adminUser"] != nil {
+		return c.RenderArgs["adminUser"].(*models.Admin)
 	}
 	if adminName, ok := c.Session["AdminName"]; ok {
 		return c.getAdmin(adminName)
@@ -102,4 +114,24 @@ func (c Application) getAdmin(adminName string) *models.Admin {
 		return nil
 	}
 	return admins[0].(*models.Admin)
+}
+
+func (c Application) AddMenus() revel.Result {
+	mainMenus := loadResources(c.Txn.Select(models.Resource{}, sqlMainMenus))
+	subMenus := loadResources(c.Txn.Select(models.Resource{}, sqlSubMenus))
+
+	var idIdxMap = make(map[int]int)
+	for i, mainMenu := range mainMenus {
+		idIdxMap[mainMenu.Id] = i
+	}
+
+	for _, subMenu := range subMenus {
+		if idx, ok := idIdxMap[subMenu.ParentId]; ok {
+			children := mainMenus[idx].Children
+			children = append(children, subMenu)
+			mainMenus[idx].Children = children
+		}
+	}
+	c.RenderArgs["mainMenus"] = mainMenus
+	return nil
 }

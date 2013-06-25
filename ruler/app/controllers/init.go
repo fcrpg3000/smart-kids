@@ -16,13 +16,61 @@
 // limitations under the License.
 package controllers
 
-import "github.com/robfig/revel"
+import (
+	"github.com/robfig/revel"
+	"reflect"
+	"strings"
+)
 
 func init() {
 	revel.OnAppStart(Init)
 	revel.InterceptMethod((*GorpController).Begin, revel.BEFORE)
-	// revel.InterceptMethod(Application.AddUser, revel.BEFORE)
+	revel.InterceptMethod(Application.AddAdmin, revel.BEFORE)
+	revel.InterceptMethod(Application.AddMenus, revel.BEFORE)
 	// revel.InterceptMethod(Hotels.checkUser, revel.BEFORE)
 	revel.InterceptMethod((*GorpController).Commit, revel.AFTER)
 	revel.InterceptMethod((*GorpController).Rollback, revel.FINALLY)
+
+	revel.TemplateFuncs["gt"] = greaterThan
+	revel.TemplateFuncs["replaceAll"] = replaceAll
+}
+
+func greaterThan(a, b interface{}) bool {
+	switch a.(type) {
+	case string:
+		switch b.(type) {
+		case string:
+			return reflect.ValueOf(a).String() > reflect.ValueOf(b).String()
+		}
+	case int, int8, int16, int32, int64:
+		switch b.(type) {
+		case int, int8, int16, int32, int64:
+			return reflect.ValueOf(a).Int() > reflect.ValueOf(b).Int()
+		}
+	case uint, uint8, uint16, uint32, uint64:
+		switch b.(type) {
+		case uint, uint8, uint16, uint32, uint64:
+			return reflect.ValueOf(a).Uint() > reflect.ValueOf(b).Uint()
+		}
+	case float32, float64:
+		switch b.(type) {
+		case float32, float64:
+			return reflect.ValueOf(a).Float() > reflect.ValueOf(b).Float()
+		}
+	}
+	return false
+}
+
+func replaceAll(src, old, newVal interface{}) string {
+	var newStr string
+	s := reflect.ValueOf(src).String()
+	o := reflect.ValueOf(old).String()
+	switch newVal.(type) {
+	case int, int8, int16, int32, int64:
+		newStr = string(reflect.ValueOf(newVal).Int())
+		break
+	default:
+		newStr = reflect.ValueOf(newVal).String()
+	}
+	return strings.Replace(s, o, newStr, 100)
 }

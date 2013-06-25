@@ -16,14 +16,274 @@
 // limitations under the License.
 package models
 
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"regexp"
+	"smart-kids/util"
+	"strings"
+)
+
+// Private const
 const (
-	baseQueryForAdmin = "SELECT admin_id, admin_name, hash_password, pwd_salt, " +
+	countQueryTpl       = "SELECT count(%s) FROM %s x"
+	deleteAllQueryTpl   = "DELETE FROM %s x "
+	defaultAlias        = "x"
+	countReplacementTpl = "SELECT count(%s) $5$6$7"
+	simpleCountValue    = "$2"
+	complexCountValue   = "$3$6"
+	identifier          = "[\\w._$]+"
+	equalsConditionTpl  = "%s.%s = ?"
+)
+
+// Public const
+const (
+	BASE_QUERY_ADMIN = "SELECT admin_id, admin_name, hash_password, pwd_salt, " +
 		"user_id, user_name, emp_name, emp_no, created_by_id, " +
 		"created_by_name, created_time, last_modified_time, " +
 		"is_enabled, last_ip FROM m_admin "
 	BASE_QUERY_ROLE = "SELECT role_id, role_name, role_code, role_desc, created_by_id, " +
 		"created_by_name, created_time, last_modified_time FROM m_role "
-	QUERY_ADMIN_BY_NAME = baseQueryForAdmin + "WHERE admin_name = ?"
-	QUERY_ROLE_BY_NAME  = BASE_QUERY_ROLE + "WHERE role_name = ?"
-	QUERY_ROLE_BY_CODE  = BASE_QUERY_ROLE + "WHERE role_code = ?"
+	BASE_QUERY_RESOURCE = "SELECT res_id, res_name, res_code, res_desc, res_url, " +
+		"parent_id, top_id, is_menu, created_by_id, created_by_name, created_time, " +
+		"last_modified_time FROM m_resource "
+	QUERY_ADMIN_BY_NAME   = BASE_QUERY_ADMIN + "WHERE admin_name = ?"
+	QUERY_ROLE_BY_NAME    = BASE_QUERY_ROLE + "WHERE role_name = ?"
+	QUERY_ROLE_BY_CODE    = BASE_QUERY_ROLE + "WHERE role_code = ?"
+	QUERY_RESOURCE_BY_PID = BASE_QUERY_RESOURCE + "WHERE parent_id = ?"
 )
+
+// error variables
+var (
+	defaultSortError = errors.New("The pageable's sort is nil, the default sort must not be nil.")
+)
+
+// query variables
+var (
+	identifierGroup  = fmt.Sprintf("(%s)", identifier)
+	leftJoin         = fmt.Sprintf("left (outer )?join %s (as )?%s", identifier, identifierGroup)
+	leftJoinRegexp   = regexp.MustCompile(leftJoin)
+	aliasMatchRegexp = regexp.MustCompile(fmt.Sprintf("(?: from)(?: )+%s(?: as)*(?: )+(\\w*)", identifierGroup))
+	countMatchRegexp = regexp.MustCompile(fmt.Sprintf("((?i:select)\\s+((distinct )?(.+?)?)\\s+)?((?i:from)\\s+"+
+		"%s(?:\\s+as)?\\s+)%s(.*)", identifier, identifierGroup))
+)
+
+// inner set implementation
+type stringSet struct {
+	a []string
+}
+
+func (s stringSet) contains(value string) bool {
+	return s.indexOf(value) != -1
+}
+
+func (s stringSet) indexOf(value string) int {
+	for i, entry := range s.a {
+		if value == entry {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *stringSet) add(value string) *stringSet {
+	if s.contains(value) {
+		return s
+	}
+	s.a = append(s.a, value)
+	return s
+}
+
+func (s stringSet) toArray() []string {
+	return s.a
+}
+
+// Query string utilities functions
+// --------------------------------------------------------------------------------------
+
+// Returns the query string to execute an exists query for the given id attributes.
+// Examples:
+//    tableName, placeHolder := "user", "username"
+//    ExistsQueryString(tableName, placeHolder, []string{"is_vip"})
+// Returns:
+//    "SELECT count(username) FROM user x WHERE x.is_vip = ? AND 1 = 1"
+//
+// Param tableName the name of the table to create the query for, must not be empty.
+// Param placeHolder the placeholder for the count clause, must not be empty.
+// Param idAttributes the id attributes for the table.
+func ExistsQueryString(tableName, placeHolder string, idAttributes []string) string {
+	querySlice := []string{fmt.Sprintf(countQueryTpl, placeHolder, tableName)}
+	querySlice = append(querySlice, " WHERE ")
+
+	for _, attribute := range idAttributes {
+		querySlice = append(querySlice, fmt.Sprintf(equalsConditionTpl, "x", attribute))
+		querySlice = append(querySlice, " AND ")
+	}
+	querySlice = append(querySlice, "1 = 1")
+	return strings.Join(querySlice, "")
+}
+
+// Adds "order by" clause to the SQL query.
+// Uses the default alias to bind the sorting property to.
+func ApplySorting(query string, sort *util.Sort) string {
+	return ApplySortingWithAlias(query, sort, defaultAlias)
+}
+
+// Adds "order by" clause to the SQL query.
+func ApplySortingWithAlias(query string, sort *util.Sort, alias string) string {
+	if sort == nil || reflect.ValueOf(sort).IsNil() || len(sort.Orders) == 0 {
+		return query
+	}
+	q := []string{query}
+	if strings.Contains(query, "order by") {
+		q = append(q, ", ")
+	} else {
+		q = append(q, " order by ")
+	}
+	aliases := getOuterJoinAliases(query)
+
+	for i, order := range sort.Orders {
+		if i > 0 {
+			q = append(q, ", ")
+		}
+		q = append(q, getOrderClause(aliases, alias, order))
+	}
+	return strings.Join(q, "")
+}
+
+// Resolves the alias for the entity to be retrieved from the given SQL query.
+func DetectAlias(query string) (string, bool) {
+	submatches := aliasMatchRegexp.FindAllStringSubmatch(query, -1)
+	if len(submatches) == 0 {
+		return "", false
+	}
+	submatch := submatches[0]
+	if len(submatch) < 3 {
+		return "", false
+	}
+	target := submatch[2]
+	if len(target) == 0 {
+		return "", false
+	} else {
+		return target, true
+	}
+}
+
+// Creates a count projected query from the given orginal query.
+// Returns empty string if originalQuery is empty.
+//
+// Param originalQuery must not be empty
+func CreateCountQuery(originalQuery string) string {
+	if len(originalQuery) == 0 {
+		return ""
+	}
+	matches := countMatchRegexp.FindStringSubmatch(originalQuery)
+	var (
+		variable         string
+		countReplacement string
+		useVariable      bool
+	)
+	if len(matches) > 0 {
+		variable = matches[4]
+	}
+	useVariable = len(variable) > 0 && strings.Index(variable, "new") != 0 &&
+		strings.Index(variable, "count(") != 0
+	if useVariable {
+		countReplacement = fmt.Sprintf(countReplacementTpl, simpleCountValue)
+	} else {
+		countReplacement = fmt.Sprintf(countReplacementTpl, complexCountValue)
+	}
+	fmt.Printf("CountReplacement: %s\n", countReplacement)
+	return countMatchRegexp.ReplaceAllString(originalQuery, countReplacement)
+}
+
+func getOuterJoinAliases(query string) []string {
+	result := stringSet{}
+	matchers := leftJoinRegexp.FindAllStringSubmatch(query, -1)
+
+	for _, matcher := range matchers {
+		if len(matcher) == 0 {
+			continue
+		}
+		if len(matcher) > 3 {
+			group := matcher[3]
+			if len(group) > 0 {
+				result.add(group)
+			}
+		}
+	}
+	return result.toArray()
+}
+
+// Returns the order clause for the given Order.
+// Will prefix the clause with the given alias if the referenced
+// property refers to a join alias.
+//
+// Param joinAliases the join aliases of the original query.
+// Param alias the alias for the root entity.
+// Param order the order object to build the clause for.
+func getOrderClause(joinAliases []string, alias string, order *util.Order) string {
+	qualifyReference := true
+
+	for _, joinAlias := range joinAliases {
+		if strings.Index(joinAlias, order.Property) == 0 {
+			qualifyReference = false
+			break
+		}
+	}
+	var (
+		reference string
+		wrapped   string
+	)
+	if qualifyReference {
+		reference = fmt.Sprintf("%s.%s", alias, order.Property)
+	} else {
+		reference = order.Property
+	}
+	if order.IgnoreCase {
+		wrapped = fmt.Sprintf("lower(%s)", reference)
+	} else {
+		wrapped = reference
+	}
+	return fmt.Sprintf("%s %s", wrapped, strings.ToLower(order.Direction))
+}
+
+type SqlBuilder struct {
+	sqlParts []string
+}
+
+func (s *SqlBuilder) Append(str string) *SqlBuilder {
+	s.sqlParts = append(s.sqlParts, str)
+	return s
+}
+
+func (s SqlBuilder) ToSqlString() string {
+	return strings.Join(s.sqlParts, "")
+}
+
+func NewSqlBuilder(base string) *SqlBuilder {
+	sqlBuilder := &SqlBuilder{}
+	if len(base) > 0 {
+		return sqlBuilder.Append(base)
+	}
+	return sqlBuilder
+}
+
+// Returns count query SQL string of the specified count field and table name.
+func CountSql(f string, tbl string) string {
+	return fmt.Sprintf(countQueryTpl, f, tbl)
+}
+
+func PageOrderBy(sqlBuilder *SqlBuilder, pageable *util.Pageable, defaultSort *util.Sort) error {
+	sort := pageable.Sort
+	if sort == nil || reflect.ValueOf(sort).IsNil() {
+		if defaultSort == nil || reflect.ValueOf(defaultSort).IsNil() {
+			return defaultSortError
+		}
+		sort = defaultSort
+	}
+	sqlBuilder.Append(sort.SqlString())
+	sqlBuilder.Append(fmt.Sprintf(" LIMIT %d, %d", pageable.Offset, pageable.PageSize))
+	return nil
+}

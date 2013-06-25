@@ -11,9 +11,18 @@ GET     /logout                                 Application.Logout
 
 # Administrators
 GET     /admins/admin_list                      Administrators.AdminList
-POST    /admins/disable_admin                   Administrators.DisableAdmin
+GET     /admins/admin_list/:p                   Administrators.AdminList
+POST    /admins/disable_admin/:id               Administrators.DisableAdmin
+POST    /admins/enable_admin/:id                Administrators.EnableAdmin
 GET     /admins/admin_detail                    Administrators.AdminDetail
+GET     /admins/edit_admin/:id                  Administrators.AdminDetail
 GET     /admins/new_admin                       Administrators.AdminDetail
+POST    /admins/save_admin                      Administrators.SaveAdmin
+GET     /admins/check_admin_name/:adminName     Administrators.CheckAdminName
+
+# Privileges
+GET     /privilege/res_list                     Privileges.ResourceList
+GET     /privilege/res_list/:p/:ps              Privileges.ResourceList
 
 # Ignore favicon requests
 GET     /favicon.ico                            404

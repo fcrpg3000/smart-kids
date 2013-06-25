@@ -15,9 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+operation.successFul=操作已成功！
+
 AdminDetail.title.creation=创建新的管理员
 AdminDetail.title.edit=%s(%s,%s) 管理员的详细信息
 
 admin.notFound=指定的管理员不存在，或已被系统管理员删除！
 admin.cannotBanSuper=不能禁止系统内置的超级管理员！
+admin.cannotUpdateSuper=系统内置的超级管理员只能修改员工名称和工号！
 admin.successBanned=已成功禁止指定的管理员！
+admin.successEdit=管理员（%s）信息保存成功！
+admin.errorEdit=保存管理员信息失败，原因：%s！
+admin.errorName=错误的管理员用户名格式！
+admin.errorExistName=管理员用户名已存在！
+admin.nameNotFound=管理员用户名不存在！
+

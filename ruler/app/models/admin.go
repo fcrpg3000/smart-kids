@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"github.com/coopernurse/gorp"
 	"github.com/go-sql-driver/mysql"
+	"reflect"
 	"time"
 )
 
 type Admin struct {
 	Id               int            `db:"admin_id"`
 	AdminName        string         `db:"admin_name"`
-	HashPassword     string         `db:"hash_password"`
-	Salt             string         `db:"pwd_salt"`
+	HashPassword     string         `db:"hash_password" json:"-"`
+	Salt             string         `db:"pwd_salt" json:"-"`
 	UserId           int64          `db:"user_id"`   // relate to User#Id if necessary
 	UserName         sql.NullString `db:"user_name"` // relate to User#UserName if necessary
 	EmpName          sql.NullString `db:"emp_name"`
@@ -41,8 +42,8 @@ type Admin struct {
 	LastIp           sql.NullString `db:"last_ip"`
 
 	// Transient
-	Password string  `db:"-"` // used in form
-	Roles    []*Role `db:"-"`
+	Password string  `db:"-" json:"-"` // used in form
+	Roles    []*Role `db:"-" json:",omitempty"`
 }
 
 // gorp 不能自动处理关联关系，实现这个接口方法，当调用根据Id获取 Admin 对象时，
@@ -56,9 +57,11 @@ func (a *Admin) PostGet(exe gorp.SqlExecutor) error {
 		return fmt.Errorf("Error loading admin's(%d) roles : %s", a.Id, err)
 	}
 	if len(objs) > 0 {
-		a.Roles = make([]*Role, 0)
-		for _, obj := range objs {
-			a.Roles = append(a.Roles, obj.(*Role))
+		a.Roles = make([]*Role, len(objs))
+		for i, obj := range objs {
+			if !reflect.ValueOf(obj).IsNil() {
+				a.Roles[i] = obj.(*Role)
+			}
 		}
 	}
 	return nil
@@ -77,7 +80,7 @@ type Role struct {
 
 	// Transient
 	// Relation manage by Role
-	Resources []*Resource `db:"-"`
+	Resources []*Resource `db:"-" json:",omitempty"`
 }
 
 // gorp Hook pre-Insert
@@ -103,6 +106,7 @@ type Resource struct {
 	Code             string         `db:"res_code"`
 	Desc             sql.NullString `db:"res_desc"`
 	Url              string         `db:"res_url"`
+	TopId            int            `db:"top_id"`
 	ParentId         int            `db:"parent_id"`
 	IsMenu           bool           `db:"is_menu"`
 	CreatedById      int            `db:"created_by_id"`
@@ -111,6 +115,7 @@ type Resource struct {
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
 	// Transient
+	Top      *Resource   `db:"-"`
 	Parent   *Resource   `db:"-"`
 	Children []*Resource `db:"-"`
 	// Relation manage by Role
@@ -124,6 +129,12 @@ func (r *Resource) PreInsert(_ gorp.SqlExecutor) error {
 	}
 	if !r.CreatedByName.Valid {
 		r.CreatedByName.String = "System"
+	}
+	if r.Top != nil {
+		r.TopId = r.Top.Id
+	}
+	if r.Parent != nil {
+		r.ParentId = r.Parent.Id
 	}
 	r.CreatedTime = mysql.NullTime{timeNow, true}
 	r.LastModifiedTime = mysql.NullTime{timeNow, true}

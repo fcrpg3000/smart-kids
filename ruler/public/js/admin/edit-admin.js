@@ -18,16 +18,33 @@
  */
 
 (function($) {
-  var jAddRole, jRemoveRole, jAllRoles, jRoles,
-      DISABLED = 'disabled', SELECTED = 'selected',
+  var jAddRole, jRemoveRole, jAllRoles, jRoles, jForm, jAid,
+      jAdminName, jEmpName, jEmpNo, jAdminNameC, jEmpNameC, jEmpNoC, 
+      jAlert, jSubmit, isModify = 0, checkedName = {}, errorName = {},
+      DISABLED = 'disabled', SELECTED = 'selected', CTRL_GROUP = 'div.control-group',
       SELECTED_OPTION = 'option:selected';
 
   /* init all html elements and variables when doc init. */
   function initElements() {
+    jForm = $('#form_edit_admin');
+    jAlert = $('#message_tip');
+    jAid = $('#txt_admin_id');
+    jAdminName = $('#txt_admin_name');
+    jEmpName = $('#txt_emp_name');
+    jEmpNo = $('#txt_emp_no');
+    jAdminNameC = jAdminName.parents(CTRL_GROUP);
+    jEmpNameC = jEmpName.parents(CTRL_GROUP);
+    jEmpNoC = jEmpNo.parents(CTRL_GROUP);
     jAddRole = $('#btn_add_role');
     jRemoveRole = $('#btn_remove_role');
     jAllRoles = $('#cmb_all_roles');
     jRoles = $('#cmb_roles');
+    jSubmit = $('#btn_save_admin').addClass(DISABLED).attr(DISABLED, true);
+
+    if (jAid.length && $.trim(jAid.val()) != "") {
+      isModify = 1;
+      oldName = jAdminName.data('oldName');
+    }
 
     $(SELECTED_OPTION, jAllRoles).attr(SELECTED, false);
     $(SELECTED_OPTION, jRoles).attr(SELECTED, false);
@@ -38,6 +55,106 @@
     jRoles.on('change click', rolesChangeHandler);
     jAddRole.click(addRolesHandler);
     jRemoveRole.click(removeRolesHandler);
+    jForm.submit(formSubmitHandler);
+
+    /* jAdminName focus and blur events binding. */
+    jAdminName.focus(function() {
+      hideAlert();
+      normalCtrlGroup(jAdminNameC);
+      return false;
+    }).blur(function() {
+      var $this = $(this), val = $.trim(this.value);
+      if (!val.length) {
+        showAlert('请输入管理员用户名称！');
+        errorCtrlGroup(jAdminNameC);
+        return false;
+      }
+      if ((isModify && oldName != val) || !isModify) {
+        if (checkedName[val]) {
+          successCtrlGroup(jAdminNameC);
+          enableSubmit();
+          return false;
+        }
+        if (errorName[val]) {
+          showAlert();
+          errorCtrlGroup(jAdminNameC);
+          disableSubmit();
+          return false;
+        }
+        // admin name changed, need verify
+        checkName(val);
+      } else {
+        successCtrlGroup(jAdminNameC);
+        enableSubmit();
+      }
+      return false;
+    });
+    jSubmit.click(function() {
+      jSubmit.button('saving');
+      var admName = $.trim(jAdminName.val()),
+          empName = $.trim(jEmpName.val()),
+          empNo = $.trim(jEmpNo.val());
+      if (!admName.length) {
+        showAlert('请输入管理员用户名称！');
+        errorCtrlGroup(jAdminNameC);
+        jSubmit.button('reset');
+        return false;
+      }
+      if (hasError) {
+        showAlert();
+      }
+      return false;
+    });
+  }
+
+  function checkName(val, fn1, fn2) {
+    $.getJSON('/admins/check_admin_name/' + val, 
+      function(data) {
+        if (data.code === 1) {
+          hideAlert();
+          successCtrlGroup(jAdminNameC);
+          checkedName[val] = 1;
+          enableSubmit();
+        } else {
+          showAlert(data.message);
+          errorCtrlGroup(jAdminNameC);
+          errorName[val] = 1;
+          disableSubmit();
+        }
+      });
+  }
+
+  function errorCtrlGroup(jCtrlGroup) {
+    jCtrlGroup.removeClass('success').addClass('error');
+  }
+
+  function normalCtrlGroup(jCtrlGroup) {
+    if (jCtrlGroup.hasClass('success')) {
+      return;
+    }
+    jCtrlGroup.removeClass('error');
+  }
+
+  function successCtrlGroup(jCtrlGroup) {
+    jCtrlGroup.removeClass('error').addClass('success');
+  }
+
+  function enableSubmit() {
+    jSubmit.removeClass(DISABLED).attr(DISABLED, false);
+  }
+  function disableSubmit() {
+    jSubmit.addClass(DISABLED).attr(DISABLED, true);
+  }
+
+  function showAlert(text) {
+    if (text) {
+      jAlert.html(text);
+    }
+    jAlert.show();
+  }
+
+  function hideAlert() {
+    jAlert.hide();
   }
 
   /* Add roles events handler. */
@@ -81,6 +198,18 @@
     } else {
       jRemoveRole.attr(DISABLED, true).addClass(DISABLED);
     }
+    return false;
+  }
+  function formSubmitHandler() {
+    $(this).ajaxSubmit({
+      dataType: 'json',
+      success: function(data) {
+        alert(data.message);
+        if (data.code !== 1) {
+          jSubmit.button('reset');
+        }
+      }
+    });
     return false;
   }
   $(function() {

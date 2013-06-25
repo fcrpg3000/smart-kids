@@ -5,18 +5,18 @@
   <li><a href="{{url "Administrators.AdminList"}}">管理后台用户</a> <span class="divider">/</span></li>
   <li class="active">{{if .title}}{{.title}}{{else}}创建新的管理员{{end}}</li>
 </ul>
-{{set . "formAction" "/admins/create_admin"}}
-{{if .admin}}{{set . "formAction" "/admins/modify_admin"}}{{end}}
+{{set . "formAction" "/admins/save_admin"}}
+{{if .admin}}{{set . "formAction" "/admins/save_admin"}}{{end}}
 <div class="row-fluid">
   <form class="form-horizontal" id="form_edit_admin" name="formEditAdmin" action="{{.formAction}}" method="post">
     <div class="row">
     <div class="span5">
-      {{if .admin}}<input type="hidden" name="admin.Id" value="{{.admin.Id}}" />{{end}}
-      <p id="message_tip" class="hide"></p>
+      {{if .admin}}<input type="hidden" id="txt_admin_id" name="admin.Id" value="{{.admin.Id}}" />{{end}}
+      <div id="message_tip" class="alert alert-error hide"></div>
       <div class="control-group">
         <label class="control-label" for="txt_admin_name">用户名：</label>
         <div class="controls">
-          <input type="text" id="txt_admin_name" name="admin.AdminName" placeholder="用户名" value="{{.admin.AdminName}}">
+          <input type="text" id="txt_admin_name" name="admin.AdminName" placeholder="用户名" value="{{.admin.AdminName}}" data-old-name="{{.admin.AdminName}}">
           <span class="help-inline hide" id="help_username">请输入管理员用户名！</span>
         </div>
       </div>
@@ -44,7 +44,8 @@
       </div>
       <div class="control-group">
         <div class="controls">
-          <button type="submit" id="btn_edit" class="btn btn-primary">保 存</button>&nbsp;&nbsp;
+          <button type="submit" id="btn_save_admin" class="btn btn-primary"
+              data-saving-text="正在保存...">保 存</button>&nbsp;&nbsp;
           <button type="reset" id="btn_reset" class="btn btn-info">重 置</button>
         </div>
       </div>
@@ -86,7 +87,6 @@
   </div><!--/.row second-->
   </form>
 </div>
-{{append . "moreScripts" "js/admin/edit-admin.js"}}
 
-{{/*--/.admin with--*/}}
+{{append . "moreScripts" "js/admin/edit-admin.js"}}
 {{template "footer.html" .}}

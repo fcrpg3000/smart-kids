@@ -23,9 +23,9 @@ const (
 )
 
 type ResponseResult struct {
-	Code    int
-	Message string
-	Values  map[string]interface{}
+	Code    int                    `json:"code"`
+	Message string                 `json:"message"`
+	Values  map[string]interface{} `json:"values"`
 }
 
 func (r *ResponseResult) IsSuccessful() bool {
