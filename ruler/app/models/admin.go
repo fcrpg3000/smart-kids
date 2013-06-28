@@ -25,6 +25,21 @@ import (
 	"time"
 )
 
+// Admin table's field name constants
+const (
+	ADMIN_TABLE     = "m_admin"
+	F_ADMIN_ID      = "admin_id"
+	F_ADMIN_NAME    = "admin_name"
+	F_HASH_PASSWORD = "hash_password"
+	F_SALT          = "pwd_salt"
+	F_USER_ID       = "user_id"
+	F_USER_NAME     = "user_name"
+	F_EMP_NAME      = "emp_name"
+	F_EMP_NO        = "emp_no"
+	F_IS_ENABLED    = "is_enabled"
+	F_LAST_IP       = "last_ip"
+)
+
 type Admin struct {
 	Id               int            `db:"admin_id"`
 	AdminName        string         `db:"admin_name"`
@@ -67,6 +82,14 @@ func (a *Admin) PostGet(exe gorp.SqlExecutor) error {
 	return nil
 }
 
+const (
+	ROLE_TABLE  = "m_role"
+	F_ROLE_ID   = "role_id"
+	F_ROLE_CODE = "role_code"
+	F_ROLE_NAME = "role_name"
+	F_ROLE_DESC = "role_desc"
+)
+
 // mapped table
 type Role struct {
 	Id               int            `db:"role_id"`
@@ -99,6 +122,18 @@ func (r *Role) PreUpdate(_ gorp.SqlExecutor) error {
 	r.LastModifiedTime = mysql.NullTime{time.Now(), true}
 	return nil
 }
+
+const (
+	RESOURCE_TABLE = "m_resource"
+	F_RES_ID       = "res_id"
+	F_RES_NAME     = "res_name"
+	F_RES_CODE     = "res_code"
+	F_RES_DESC     = "res_desc"
+	F_RES_URL      = "res_url"
+	F_TOP_ID       = "top_id"
+	F_PARENT_ID    = "parent_id"
+	F_IS_MENU      = "is_menu"
+)
 
 type Resource struct {
 	Id               int            `db:"res_id"`

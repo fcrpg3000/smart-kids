@@ -21,9 +21,9 @@ import (
 )
 
 type Client struct {
-	Id       int
-	Name     string
-	IsMobile bool
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	IsMobile bool   `json:"isMobile"`
 }
 
 // 内置的客户端信息
@@ -65,13 +65,13 @@ type Cacheable interface {
 
 // mapped table dict_country
 type Country struct {
-	Id    int    `db:"id"`
-	Name  string `db:"c_name"`
-	EName string `db:"e_name"`
-	Code  string `db:"d_code"`
+	Id    int    `db:"id" json:"id"`
+	Name  string `db:"c_name" json:"cname"`
+	EName string `db:"e_name" json:"ename"`
+	Code  string `db:"d_code" json:"code"`
 
 	// Transient
-	Provinces []*Province `db:"-"`
+	Provinces []*Province `db:"-" json:"provinces,omitempty"`
 }
 
 func (c Country) CacheKey() string {
@@ -85,18 +85,18 @@ func (c Country) IdListKey() string {
 // province or state
 // mapped table `dict_province`
 type Province struct {
-	Id             int    `db:"id"`
-	CountryId      int    `db:"country_id"`
-	Name           string `db:"c_name"`
-	ShortName      string `db:"s_name"`
-	FullName       string `db:"f_name"`
-	Code           string `db:"d_code"`
-	IsState        bool   `db:"is_state"`
-	IsMunicipality bool   `db:"is_municipality"`
+	Id             int    `db:"id" json:"id"`
+	CountryId      int    `db:"country_id" json:"countryId"`
+	Name           string `db:"c_name" json:"cname"`
+	ShortName      string `db:"s_name" json:"sname"`
+	FullName       string `db:"f_name" json:"fname"`
+	Code           string `db:"d_code" json:"code"`
+	IsState        bool   `db:"is_state" json:"isState"`
+	IsMunicipality bool   `db:"is_municipality" json:"isMunicipality"`
 
 	// Transient
-	Country *Country `db:"-"`
-	Cities  []*City  `db:"-"`
+	Country *Country `db:"-" json:"country,omitempty"`
+	Cities  []*City  `db:"-" json:"cities,omitempty"`
 }
 
 func (p Province) CacheKey() string {
@@ -109,16 +109,16 @@ func (p Province) IdListKey() string {
 
 // mapped table `dict_city`
 type City struct {
-	Id        int    `db:"id"`
-	CountryId int    `db:"country_id"`
-	ProId     int    `db:"pro_id"`
-	Name      string `db:"c_name"`
-	Code      string `db:"d_code"`
+	Id        int    `db:"id" json:"id"`
+	CountryId int    `db:"country_id", json:"countryId"`
+	ProId     int    `db:"pro_id" json:"proId"`
+	Name      string `db:"c_name" json:"name"`
+	Code      string `db:"d_code" json:"code"`
 
 	// Transient
-	Country   *Country    `db:"-"`
-	Province  *Province   `db:"-"`
-	Districts []*District `db:"-"`
+	Country   *Country    `db:"-" json:"country,omitempty"`
+	Province  *Province   `db:"-" json:"province,omitempty"`
+	Districts []*District `db:"-" json:"districts,omitempty"`
 }
 
 func (c City) CacheKey() string {
@@ -131,19 +131,19 @@ func (p City) IdListKey() string {
 
 // mapped table `dict_district`
 type District struct {
-	Id        int    `db:"id"`
-	CountryId int    `db:"country_id"`
-	CityId    int    `db:"city_id"`
-	ProId     int    `db:"pro_id"`
-	Name      string `db:"c_name"`
-	ShortName string `db:"s_name"`
-	FullName  string `db:"f_name"`
-	Code      string `db:"d_code"`
+	Id        int    `db:"id" json:"id"`
+	CountryId int    `db:"country_id" json:"countryId"`
+	CityId    int    `db:"city_id" json:"cityId"`
+	ProId     int    `db:"pro_id" json:"proId"`
+	Name      string `db:"c_name" json:"cname"`
+	ShortName string `db:"s_name" json:"sname"`
+	FullName  string `db:"f_name" json:"fname"`
+	Code      string `db:"d_code" json:"code"`
 
 	// Transient
-	Country  *Country  `db:"-"`
-	Province *Province `db:"-"`
-	City     *City     `db:"-"`
+	Country  *Country  `db:"-" json:"country,omitempty"`
+	Province *Province `db:"-" json:"province,omitempty"`
+	City     *City     `db:"-" json:"city,omitempty"`
 }
 
 func (d District) CacheKey() string {
@@ -163,10 +163,10 @@ type Location struct {
 }
 
 type Education struct {
-	Id    int
-	Name  string
-	EName string
-	Level int
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	EName string `json:"ename"`
+	Level int    `json:"lv"`
 }
 
 // Returns Education object string
@@ -208,9 +208,9 @@ func EducationOf(id int) *Education {
 }
 
 type Feeling struct {
-	Id    int
-	Name  string
-	EName string
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	EName string `json:"ename"`
 }
 
 // Returns Feeling object string
@@ -258,9 +258,9 @@ func AllFeelings() []*Feeling {
 }
 
 type BloodType struct {
-	Id    int
-	Name  string
-	EName string
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	EName string `json:"ename"`
 }
 
 // Returns BloodType object string
@@ -298,14 +298,14 @@ func AllBloodTypes() []*BloodType {
 }
 
 type Constellation struct {
-	Id         int
-	Name       string
-	EName      string
-	EFName     string
-	StartMonth int
-	StartDay   int
-	EndMonth   int
-	EndDay     int
+	Id         int    `json:"id"`
+	Name       string `json:"name"`
+	EName      string `json:"ename"`
+	EFName     string `json:"efname"`
+	StartMonth int    `json:"s_m"`
+	StartDay   int    `json:"s_d"`
+	EndMonth   int    `json:"e_m"`
+	EndDay     int    `json:"e_d"`
 }
 
 // Returns Constellation object string

@@ -41,6 +41,10 @@ type Application struct {
 	GorpController
 }
 
+func (c Application) NotFoundMessage(entity string) string {
+	return c.Message("resource.notFound", entity)
+}
+
 func (c Application) Index() revel.Result {
 	if c.connected() == nil {
 		c.Flash.Error("请先登录系统再操作！")

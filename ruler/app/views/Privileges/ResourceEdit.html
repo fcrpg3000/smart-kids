@@ -1,0 +1,78 @@
+{{template "header.html" .}}{{template "flash.html" .}}
+
+<ul class="breadcrumb">
+  <li><a href="{{url "Application.Index"}}">首页</a> <span class="divider">/</span></li>
+  <li><a href="{{url "Privileges.ResourceList"}}">管理权限资源</a> <span class="divider">/</span></li>
+  <li class="active">{{.title}}</li>
+</ul>
+{{set . "formAction" "/privilege/add_res"}}
+{{if .res}}{{set . "formAction" "/privilege/modify_res"}}{{end}}
+<div>
+  <form class="form-horizontal" id="form_edit_res" name="formEditRes" action="{{.formAction}}" method="post">
+      {{if .res}}<input type="hidden" id="txt_res_id" name="res.Id" value="{{.res.Id}}" />{{end}}
+      <div id="alert" class="alert">
+        <p><strong>Warning!</strong> 此信息一般只能被系统管理员添加或更新，如果编辑者拥有此权限，请谨慎操作！</p>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="txt_res_name">资源名称：</label>
+        <div class="controls">
+          <input type="text" id="txt_res_name" name="res.Name" placeholder="资源名称" value="{{.res.Name}}">
+          <span class="help-inline hide" id="help_res_name" data-src-content="请输入资源名称！">请输入资源名称！</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="txt_res_code">编码标识：</label>
+        <div class="controls">
+          <input type="text" id="txt_res_code" name="res.Code" placeholder="编码标识" value="{{.res.Code}}">
+          <span class="help-inline" id="help_res_code" data-src-content="例如：权限管理：ResourceEdit">例如：权限管理：ResourceEdit</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="txt_res_url">资源URI：</label>
+        <div class="controls">
+          <input type="text" id="txt_res_url" name="res.Url" placeholder="资源URI" value="{{.res.Url}}">
+          <span class="help-inline" id="help_res_url" data-src-content="例如：/privilege/res_edit">例如：/privilege/res_edit</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="txt_res_desc">资源描述：</label>
+        <div class="controls">
+          <input type="hidden" name="res.Desc.Valid" value="{{.res.Desc.Valid}}" />
+          <textarea id="txt_res_desc" name="res.Desc.String" placeholder="资源描述" rows="3">{{.res.Desc.String}}</textarea>
+          <span class="help-inline" id="help_res_desc" data-src-content="请输入资源描述！">请输入资源描述！</span>
+        </div>
+      </div>
+      {{if or (and .res (gt .res.ParentId 0)) (not .res)}} {{/*-- (res != nil && res.ParentId > 0) || res == nil --*/}} {{ $resParentId := .res.ParentId }}
+      <div class="control-group">
+        <label class="control-label" for="cmb_res_parent">所属父资源：</label>
+        <div class="controls">
+          <select id="cmb_res_parent" name="res.ParentId">
+            <option value="-1" data-url="无">--请选择父资源--</option>
+            {{range .topResources}}
+            <option value="{{.Id}}"{{if eq $resParentId .Id}} selected="selected"{{end}} data-url="{{.Url}}">{{.Name}}</option>{{end}}
+          </select>
+          <span class="help-inline" id="help_res_parent">{{.res.Parent.Url}}</span>
+        </div>
+      </div>{{end}}
+      <div class="control-group">
+        <div class="controls">
+          {{set . "isMenu" false}} {{if .res}}{{set . "isMenu" .res.IsMenu}}{{end}}
+          <input type="hidden" id="txt_is_menu" name="res.IsMenu" value="{{.isMenu}}" />
+          <label class="checkbox">
+            <input type="checkbox" id="chk_is_menu" {{if or .res.IsMenu (not .res)}}checked="checked"{{end}}/> 是否为菜单项
+          </label>
+          <span class="help-inline" id="help_is_menu">显示在页面左侧的菜单中</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="controls">
+          <button type="submit" id="btn_save_res" class="btn btn-primary"
+              data-saving-text="正在保存...">保 存</button>&nbsp;&nbsp;
+          <button type="reset" id="btn_reset" class="btn btn-info">重 置</button>
+        </div>
+      </div>
+  </form>
+</div><!--/.container-->
+
+{{append . "moreScripts" "js/privilege/res-edit.js"}}
+{{template "footer.html" .}}

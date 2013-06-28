@@ -16,6 +16,7 @@
 # limitations under the License.
 
 operation.successFul=操作已成功！
+resource.notFound=%s 不存在，或已被管理员删除！
 
 AdminDetail.title.creation=创建新的管理员
 AdminDetail.title.edit=%s(%s,%s) 管理员的详细信息
@@ -30,3 +31,7 @@ admin.errorName=错误的管理员用户名格式！
 admin.errorExistName=管理员用户名已存在！
 admin.nameNotFound=管理员用户名不存在！
 
+ResourceEdit.title.creation=添加新的权限资源
+ResourceEdit.title.edit=%s 的详细信息
+resource.errorEdit=保存权限资源信息失败，原因：%s！
+resource.successEdit=权限资源信息（%s）保存成功！

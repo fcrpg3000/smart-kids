@@ -20,28 +20,29 @@ import (
 	"errors"
 	"fmt"
 	"github.com/coopernurse/gorp"
+	"github.com/go-sql-driver/mysql"
 	"time"
 )
 
 type Posts struct {
-	Id               int64     `db:"posts_id"`
-	SrcId            int64     `db:"posts_src_id"`
-	Content          string    `db:"posts_content"`
-	CreatedTime      time.Time `db:"created_time"`
-	LastModifiedTime time.Time `db:"last_modified_time"`
-	UserId           int64     `db:"user_id"`
-	UserName         string    `db:"user_name"`
-	ClientType       int       `db:"client_type"`
+	Id               int64          `db:"posts_id"`
+	SrcId            int64          `db:"posts_src_id"`
+	Content          string         `db:"posts_content"`
+	CreatedTime      mysql.NullTime `db:"created_time"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
+	UserId           int64          `db:"user_id"`
+	UserName         string         `db:"user_name"`
+	ClientType       int            `db:"client_type"`
 
 	// Transient
-	Client *Client `db:"-"`
-	User   *User   `db:"-"`
+	Client *Client `db:"-" json:"client,omitempty"`
+	User   *User   `db:"-" json:"user,omitempty"`
 }
 
 // Posts description string
 func (p *Posts) Description() string {
 	return fmt.Sprintf("%s: %s %s From %s",
-		p.UserName, p.Content, p.CreatedTime.Format(time.RFC3339),
+		p.UserName, p.Content, p.CreatedTime.Time.Format(time.RFC3339),
 		p.Client.Name)
 }
 
@@ -83,8 +84,8 @@ func newPostsInternal(srcId int64, user *User, client *Client, content string) (
 	posts.Client = client
 	posts.User = user
 	posts.Content = content
-	posts.CreatedTime = timeNow
-	posts.LastModifiedTime = timeNow
+	posts.CreatedTime = mysql.NullTime{timeNow, true}
+	posts.LastModifiedTime = mysql.NullTime{timeNow, true}
 	return posts, nil
 }
 

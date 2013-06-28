@@ -80,23 +80,23 @@ type Sort struct {
 	Orders []*Order `json:",omitempty"`
 }
 
-func NewSort(direction string, properties []string) (*Sort, error) {
+func NewSort(direction string, properties []string) *Sort {
 	propLen := len(properties)
 	if propLen == 0 {
-		return nil, emptyPropertyErr
+		panic(emptyPropertyErr)
 	}
 	var orders = make([]*Order, propLen)
 	for i, property := range properties {
 		orders[i] = NewOrder(direction, property, DEFAULT_IGNORE_CASE)
 	}
-	return &Sort{orders}, nil
+	return &Sort{orders}
 }
 
-func AscendingSort(properties []string) (*Sort, error) {
+func AscendingSort(properties []string) *Sort {
 	return NewSort(DEFAULT_DIRECTION, properties)
 }
 
-func DescendingSort(properties []string) (*Sort, error) {
+func DescendingSort(properties []string) *Sort {
 	return NewSort(DESC, properties)
 }
 

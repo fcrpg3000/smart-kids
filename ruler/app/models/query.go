@@ -27,7 +27,7 @@ import (
 
 // Private const
 const (
-	countQueryTpl       = "SELECT count(%s) FROM %s x"
+	countQueryTpl       = "SELECT count(%s) FROM %s %s"
 	deleteAllQueryTpl   = "DELETE FROM %s x "
 	defaultAlias        = "x"
 	countReplacementTpl = "SELECT count(%s) $5$6$7"
@@ -67,6 +67,7 @@ var (
 	aliasMatchRegexp = regexp.MustCompile(fmt.Sprintf("(?: from)(?: )+%s(?: as)*(?: )+(\\w*)", identifierGroup))
 	countMatchRegexp = regexp.MustCompile(fmt.Sprintf("((?i:select)\\s+((distinct )?(.+?)?)\\s+)?((?i:from)\\s+"+
 		"%s(?:\\s+as)?\\s+)%s(.*)", identifier, identifierGroup))
+	fromMatchRegexp = regexp.MustCompile("(?i:from)")
 )
 
 // inner set implementation
@@ -113,7 +114,7 @@ func (s stringSet) toArray() []string {
 // Param placeHolder the placeholder for the count clause, must not be empty.
 // Param idAttributes the id attributes for the table.
 func ExistsQueryString(tableName, placeHolder string, idAttributes []string) string {
-	querySlice := []string{fmt.Sprintf(countQueryTpl, placeHolder, tableName)}
+	querySlice := []string{CountSql(placeHolder, tableName)}
 	querySlice = append(querySlice, " WHERE ")
 
 	for _, attribute := range idAttributes {
@@ -170,6 +171,19 @@ func DetectAlias(query string) (string, bool) {
 	}
 }
 
+// Returns count query SQL string of the specified count field and table name.
+func CountSql(f string, tbl string) string {
+	return simpleCountQuery(f, tbl, defaultAlias)
+}
+
+func simpleCountQuery(f, tbl, alias string) string {
+	countQuery := fmt.Sprintf(countQueryTpl, f, tbl, alias)
+	if len(alias) == 0 {
+		return countQuery[0 : len(countQuery)-1]
+	}
+	return countQuery
+}
+
 // Creates a count projected query from the given orginal query.
 // Returns empty string if originalQuery is empty.
 //
@@ -183,10 +197,27 @@ func CreateCountQuery(originalQuery string) string {
 		variable         string
 		countReplacement string
 		useVariable      bool
+		multiFields      bool
+		notMatch         bool
 	)
-	if len(matches) > 0 {
+	notMatch = len(matches) == 0
+	if !notMatch {
 		variable = matches[4]
+		// for i, match := range matches {
+		// 	fmt.Printf("$_%d = > %s\n", i, match)
+		// }
+		if !strings.Contains(variable, "distinct") && strings.Contains(variable, ",") {
+			multiFields = true
+		}
 	}
+	if multiFields || notMatch {
+		fromIdx := fromMatchRegexp.FindStringIndex(originalQuery)
+		if len(fromIdx) == 0 {
+			return originalQuery
+		}
+		return simpleCountQuery("*", originalQuery[fromIdx[0]+5:], "")
+	}
+
 	useVariable = len(variable) > 0 && strings.Index(variable, "new") != 0 &&
 		strings.Index(variable, "count(") != 0
 	if useVariable {
@@ -194,7 +225,6 @@ func CreateCountQuery(originalQuery string) string {
 	} else {
 		countReplacement = fmt.Sprintf(countReplacementTpl, complexCountValue)
 	}
-	fmt.Printf("CountReplacement: %s\n", countReplacement)
 	return countMatchRegexp.ReplaceAllString(originalQuery, countReplacement)
 }
 
@@ -270,20 +300,15 @@ func NewSqlBuilder(base string) *SqlBuilder {
 	return sqlBuilder
 }
 
-// Returns count query SQL string of the specified count field and table name.
-func CountSql(f string, tbl string) string {
-	return fmt.Sprintf(countQueryTpl, f, tbl)
-}
-
-func PageOrderBy(sqlBuilder *SqlBuilder, pageable *util.Pageable, defaultSort *util.Sort) error {
+func (s *SqlBuilder) PageOrderBy(pageable *util.Pageable, defaultSort *util.Sort) *SqlBuilder {
 	sort := pageable.Sort
 	if sort == nil || reflect.ValueOf(sort).IsNil() {
 		if defaultSort == nil || reflect.ValueOf(defaultSort).IsNil() {
-			return defaultSortError
+			panic(defaultSortError)
 		}
 		sort = defaultSort
 	}
-	sqlBuilder.Append(sort.SqlString())
-	sqlBuilder.Append(fmt.Sprintf(" LIMIT %d, %d", pageable.Offset, pageable.PageSize))
-	return nil
+	s.Append(sort.SqlString())
+	s.Append(fmt.Sprintf(" LIMIT %d, %d", pageable.Offset, pageable.PageSize))
+	return s
 }

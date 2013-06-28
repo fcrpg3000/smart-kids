@@ -17,8 +17,13 @@
 package models
 
 import (
+	"crypto"
+	"database/sql"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/coopernurse/gorp"
+	"github.com/go-sql-driver/mysql"
 	"github.com/robfig/revel"
 	"regexp"
 	"time"
@@ -32,6 +37,8 @@ var (
 		1: Male,
 		2: Female,
 		3: SecretGender}
+
+	emptyNameAndPwd = errors.New("The userName and password must not be empty.")
 )
 
 func GenderOf(code int) Gender {
@@ -74,14 +81,15 @@ func (g genderImpl) String() string {
 }
 
 type User struct {
-	UserId           int64     `db:"user_id"`
-	UserName         string    `db:"user_name"`
-	HashPassword     string    `db:"hash_password"`
-	GenderCode       int       `db:"gender"`
-	Email            string    `db:"email"`
-	CommonlyEmail    string    `db:"commonly_email"`
-	CreatedTime      time.Time `db:"created_time"`
-	LastModifiedTime time.Time `db:"last_modified_time"`
+	UserId           int64          `db:"user_id"`
+	UserName         string         `db:"user_name"`
+	HashPassword     string         `db:"hash_password"`
+	PasswordSalt     string         `db:"password_salt"`
+	GenderCode       int            `db:"gender"`
+	Email            sql.NullString `db:"email"`
+	CommonlyEmail    sql.NullString `db:"commonly_email"`
+	CreatedTime      mysql.NullTime `db:"created_time"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
 	// Transient property
 	Password string `db:"-"`
@@ -95,11 +103,14 @@ func (u *User) String() string {
 func NewUser(userName string, password string, gender Gender, others map[string]interface{}) (*User, error) {
 	user := &User{}
 	timeNow := time.Now()
+	if len(userName) == 0 || len(password) == 0 {
+		return nil, emptyNameAndPwd
+	}
 	user.UserName = userName
 	user.Password = password
 	user.Gender = gender
-	user.CreatedTime = timeNow
-	user.LastModifiedTime = timeNow
+	user.CreatedTime = mysql.NullTime{timeNow, true}
+	user.LastModifiedTime = mysql.NullTime{timeNow, true}
 
 	if len(others) == 0 {
 		return user, nil
@@ -107,10 +118,18 @@ func NewUser(userName string, password string, gender Gender, others map[string]
 	for key, val := range others {
 		switch key {
 		case "Email":
-			user.Email = val.(string)
+			if len(val.(string)) != 0 {
+				user.Email = sql.NullString{val.(string), true}
+			} else {
+				user.Email = sql.NullString("", false)
+			}
 			break
 		case "CommonlyEmail":
-			user.CommonlyEmail = val.(string)
+			if len(val.(string)) != 0 {
+				user.CommonlyEmail = sql.NullString{val.(string), true}
+			} else {
+				user.CommonlyEmail = sql.NullString{"", false}
+			}
 			break
 		}
 	}
@@ -154,16 +173,16 @@ func (u *User) PostGet() error {
 // ----------------------------------------------------------------------------
 
 type UserAvatar struct {
-	UserId           string    `db:"user_id"`
-	UserName         string    `db:"user_name"`
-	ImageDomain      string    `db:"image_domain"`
-	AvatarPath       string    `db:"avatar_path"`       // 150x150 maybe
-	SrcAvatarPath    string    `db:"src_avatar_path"`   // source size
-	SmallAvatarPath  string    `db:"small_avatar_path"` // 80x80 maybe
-	ThumbAvatarPath  string    `db:"thumb_avatar_path"` // 40x40 maybe
-	AvatarName       string    `db:"avatar_name"`
-	CreatedTime      time.Time `db:"created_time"`
-	LastModifiedTime time.Time `db:"last_modified_time"`
+	UserId           string         `db:"user_id"`
+	UserName         string         `db:"user_name"`
+	ImageDomain      string         `db:"image_domain"`
+	AvatarPath       sql.NullString `db:"avatar_path"`       // 150x150 maybe
+	SrcAvatarPath    sql.NullString `db:"src_avatar_path"`   // source size
+	SmallAvatarPath  sql.NullString `db:"small_avatar_path"` // 80x80 maybe
+	ThumbAvatarPath  sql.NullString `db:"thumb_avatar_path"` // 40x40 maybe
+	AvatarName       string         `db:"avatar_name"`
+	CreatedTime      mysql.NullTime `db:"created_time"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 }
 
 // Returns user's normal avatar image url.
@@ -190,72 +209,67 @@ func (u UserAvatar) avatarUrlInternal(path string) string {
 // ----------------------------------------------------------------------------
 
 type BannedUser struct {
-	Id                 int64     `db:"id"`
-	UserId             int64     `db:"user_id"`
-	UserName           string    `db:"user_name"`
-	OperatorId         int64     `db:"operator_id"`
-	OperatorName       string    `db:"operator_name"`
-	Cause              string    `db:"banned_cause"`
-	IsPermanent        bool      `db:"is_permanent"`
-	BannedTime         time.Time `db:"banned_time"`
-	UnbanTime          time.Time `db:"unban_time"`
-	CreatedTime        time.Time `db:"created_time"`
-	LastModifiedTime   time.Time `db:"last_modified_time"`
-	LastModifiedById   int64     `db:"last_modified_by_id"`
-	LastModifiedByName string    `db:"last_modified_by_name"`
+	Id                 int64          `db:"id"`
+	UserId             int64          `db:"user_id"`
+	UserName           string         `db:"user_name"`
+	OperatorId         int64          `db:"operator_id"`
+	OperatorName       string         `db:"operator_name"`
+	Cause              string         `db:"banned_cause"`
+	IsPermanent        bool           `db:"is_permanent"`
+	BannedTime         mysql.NullTime `db:"banned_time"`
+	UnbanTime          mysql.NullTime `db:"unban_time"`
+	CreatedTime        mysql.NullTime `db:"created_time"`
+	LastModifiedTime   mysql.NullTime `db:"last_modified_time"`
+	LastModifiedById   int64          `db:"last_modified_by_id"`
+	LastModifiedByName string         `db:"last_modified_by_name"`
 }
 
 // BannedUser instance default string
 func (b *BannedUser) String() string {
-	return fmt.Sprintf(`BannedUser{
-	Id=%d,
-	Target=(%d, %s),
-	Operator(%d, %s),
-	Cause="%s",
-	Permanent=%v,
-	Period=(%v - %v),
-	LastModified=(time=%v, id=%d, name=%s)
-}`, b.Id, b.UserId, b.UserName, b.OperatorId, b.OperatorName,
-		b.Cause, b.IsPermanent, b.BannedTime, b.UnbanTime,
-		b.LastModifiedTime, b.LastModifiedById, b.LastModifiedByName)
+	return fmt.Sprintf("BannedUser{Id=%d,Target=(%d, %s),Operator(%d, %s),"+
+		"Cause=\"%s\",Permanent=%v,Period=(%v - %v),"+
+		"LastModified=(time=%v, id=%d, name=%s)}",
+		b.Id, b.UserId, b.UserName, b.OperatorId, b.OperatorName,
+		b.Cause, b.IsPermanent, b.BannedTime.Time, b.UnbanTime.Time,
+		b.LastModifiedTime.Time, b.LastModifiedById, b.LastModifiedByName)
 }
 
 // UserInfo struct
 // ----------------------------------------------------------------------------
 
 type UserInfo struct {
-	UserId           int64     `db:"user_id"`   // not autoincrement
-	UserName         string    `db:"user_name"` // just redundancy field
-	Nickname         string    `db:"nickname"`
-	GenderCode       int       `db:"gender_code"`
-	CalendarMode     int16     `db:"calendar_mode"`
-	DateOfBirthStr   string    `db:"date_of_birth"`
-	HtCountryId      int       `db:"ht_country_id"`
-	HtStateId        int       `db:"ht_state_id"`
-	HtCityId         int       `db:"ht_city_id"`
-	HtDistId         int       `db:"ht_dist_id"`
-	PorCountryId     int       `db:"por_country_id`
-	PorStateId       int       `db:"por_state_id"`
-	PorCityId        int       `db:"por_city_id"`
-	PorDistId        int       `db:"por_dist_id"`
-	OtherState       string    `db:"other_state"`
-	EduId            int       `db:"edu_id"`
-	FeelingId        int       `db:"feeling_id"`
-	BloodTypeId      int       `db:"blood_type_id"`
-	ConstellationId  int       `db:"constellation_id"`
-	CreatedTime      time.Time `db:"created_time"`
-	LastModifiedTime time.Time `db:"last_modified_time"`
+	UserId           int64          `db:"user_id" json:"uid"`        // not autoincrement
+	UserName         string         `db:"user_name" json:"userName"` // just redundancy field
+	Nickname         sql.NullString `db:"nickname" json:"nickname,omitempty"`
+	GenderCode       int            `db:"gender_code"`
+	CalendarMode     int16          `db:"calendar_mode"`
+	DateOfBirthStr   sql.NullString `db:"date_of_birth" json:"-"`
+	HtCountryId      int            `db:"ht_country_id" json:"-"`
+	HtStateId        int            `db:"ht_state_id" json:"-"`
+	HtCityId         int            `db:"ht_city_id" json:"-"`
+	HtDistId         int            `db:"ht_dist_id" json:"-"`
+	PorCountryId     int            `db:"por_country_id" json:"-"`
+	PorStateId       int            `db:"por_state_id" json:"-"`
+	PorCityId        int            `db:"por_city_id" json:"-"`
+	PorDistId        int            `db:"por_dist_id" json:"-"`
+	OtherState       sql.NullString `db:"other_state"`
+	EduId            int            `db:"edu_id" json:"-"`
+	FeelingId        int            `db:"feeling_id" json:"-"`
+	BloodTypeId      int            `db:"blood_type_id" json:"-"`
+	ConstellationId  int            `db:"constellation_id" json:"-"`
+	CreatedTime      mysql.NullTime `db:"created_time"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
 	// Transient
-	Gender           Gender         `db:"-"`
-	DateOfBirth      time.Time      `db:"-"`
-	User             *User          `db:"-"`
-	Hometown         *Location      `db:"-"`
-	PlaceOfResidence *Location      `db:"-"`
-	Education        *Education     `db:"-"`
-	Feeling          *Feeling       `db:"-"`
-	BloodType        *BloodType     `db:"-"`
-	Constellation    *Constellation `db:"-"`
+	Gender           Gender         `db:"-" json:"gender,omitempty"`
+	DateOfBirth      time.Time      `db:"-" json:"dateOfBirth,omitempty"`
+	User             *User          `db:"-" json:"user,omitempty"`
+	Hometown         *Location      `db:"-" json:"hometown,omitempty"`
+	PlaceOfResidence *Location      `db:"-" json:"placeOfResidence,omitempty"`
+	Education        *Education     `db:"-" json:"education,omitempty"`
+	Feeling          *Feeling       `db:"-" json:"feeling,omitempty"`
+	BloodType        *BloodType     `db:"-" json:"bloodType,omitempty"`
+	Constellation    *Constellation `db:"-" json:"constellation,omitempty"`
 }
 
 // UserInfo struct builder
@@ -275,7 +289,11 @@ func (u *UserInfoBuilder) User(user *User) *UserInfoBuilder {
 
 // Set a nickname for this builder
 func (u *UserInfoBuilder) Nickname(nickname string) *UserInfoBuilder {
-	u.userInfo.Nickname = nickname
+	if len(nickname) == 0 {
+		u.userInfo.Nickname = sql.NullString{"", false}
+	} else {
+		u.userInfo.Nickname = sql.NullString{nickname, true}
+	}
 	return u
 }
 
@@ -418,9 +436,9 @@ func (u *UserInfo) PostGet(exe gorp.SqlExecutor) error {
 			return fmt.Errorf("Error GenderCode => %d", u.GenderCode)
 		}
 	}
-	if len(u.DateOfBirthStr) > 0 {
-		if u.DateOfBirth, err = time.Parse("2006-01-02", u.DateOfBirthStr); err != nil {
-			return fmt.Errorf("Error parsing date of birth '%s'", u.DateOfBirthStr)
+	if u.DateOfBirthStr.Valid {
+		if u.DateOfBirth, err = time.Parse("2006-01-02", u.DateOfBirthStr.String); err != nil {
+			return fmt.Errorf("Error parsing date of birth '%v'", u.DateOfBirthStr)
 		}
 	}
 	return nil

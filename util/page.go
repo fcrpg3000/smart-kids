@@ -47,10 +47,7 @@ func NewPageable0(current int, pageSize int, sort *Sort) (*Pageable, error) {
 }
 
 func NewPageable(current int, pageSize int, direction string, properties []string) (*Pageable, error) {
-	sort, err := NewSort(direction, properties)
-	if err != nil {
-		return nil, err
-	}
+	sort := NewSort(direction, properties)
 	return NewPageable0(current, pageSize, sort)
 }
 

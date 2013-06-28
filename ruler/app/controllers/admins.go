@@ -18,13 +18,12 @@ package controllers
 
 import (
 	_ "encoding/json"
-	"fmt"
+	_ "fmt"
 	"github.com/robfig/revel"
 	"log"
-	"smart-kids/ruler/app/models"
+	m "smart-kids/ruler/app/models"
 	_ "smart-kids/ruler/app/routes"
 	"smart-kids/util"
-	"strings"
 )
 
 type Administrators struct {
@@ -32,15 +31,15 @@ type Administrators struct {
 }
 
 // Returns admin of the specified id.
-func (a Administrators) findAdmin(id int) *models.Admin {
-	obj, err := a.Txn.Get(models.Admin{}, id)
+func (a Administrators) findAdmin(id int) *m.Admin {
+	obj, err := a.Txn.Get(m.Admin{}, id)
 	if err != nil {
 		panic(err)
 	}
 	if obj == nil {
 		return nil
 	}
-	return obj.(*models.Admin)
+	return obj.(*m.Admin)
 }
 
 // Returns page admin of the pageable.
@@ -51,18 +50,18 @@ func (a Administrators) findAllAdmin(pageable *util.Pageable) *util.Page {
 		content []interface{}
 		err     error
 	)
-	total, err = a.Txn.SelectInt(models.CountSql("admin_name", "m_admin"))
+	total, err = a.Txn.SelectInt(m.CountSql(m.F_ADMIN_NAME, m.ADMIN_TABLE))
 	if total == 0 || err != nil {
 		return util.NewPage(nil, pageable, total)
 	}
 
 	if pageable == nil {
-		content, err = a.Txn.Select(models.Admin{}, models.BASE_QUERY_ADMIN)
+		content, err = a.Txn.Select(m.Admin{}, m.BASE_QUERY_ADMIN)
 	} else {
-		sqlBuilder := models.NewSqlBuilder(models.BASE_QUERY_ADMIN)
-		defaultSort, _ := util.AscendingSort([]string{"admin_name"})
-		models.PageOrderBy(sqlBuilder, pageable, defaultSort)
-		content, err = a.Txn.Select(models.Admin{}, sqlBuilder.ToSqlString())
+		sql := m.NewSqlBuilder(m.BASE_QUERY_ADMIN).
+			PageOrderBy(pageable, util.AscendingSort([]string{m.F_ADMIN_NAME})).
+			ToSqlString()
+		content, err = a.Txn.Select(m.Admin{}, sql)
 	}
 	if err != nil {
 		panic(err)
@@ -71,24 +70,24 @@ func (a Administrators) findAllAdmin(pageable *util.Pageable) *util.Page {
 }
 
 // Returns all roles in application
-func (a Administrators) findRoles() []*models.Role {
-	interfaces, err := a.Txn.Select(models.Role{}, models.BASE_QUERY_ROLE)
+func (a Administrators) findRoles() []*m.Role {
+	interfaces, err := a.Txn.Select(m.Role{}, m.BASE_QUERY_ROLE)
 	if err != nil {
 		panic(err)
 	}
 	if len(interfaces) == 0 {
-		return make([]*models.Role, 0)
+		return make([]*m.Role, 0)
 	}
-	roles := make([]*models.Role, len(interfaces))
+	roles := make([]*m.Role, len(interfaces))
 	for i, obj := range interfaces {
-		roles[i] = obj.(*models.Role)
+		roles[i] = obj.(*m.Role)
 	}
 	return roles
 }
 
 // Pagination admin
 func (a Administrators) AdminList(p int) revel.Result {
-	pageable, err := util.NewPageable(p, 2, util.ASC, []string{"admin_name"})
+	pageable, err := util.NewPageable(p, 2, util.ASC, []string{m.F_ADMIN_NAME})
 	if err != nil { // never heppen
 		log.Fatalf("Error for %s", err.Error())
 		panic(err)
@@ -97,7 +96,7 @@ func (a Administrators) AdminList(p int) revel.Result {
 	return a.Render(pageAdmin)
 }
 
-func (a Administrators) changeAdminEnabled(admin *models.Admin, isEnabled bool) (int64, error) {
+func (a Administrators) changeAdminEnabled(admin *m.Admin, isEnabled bool) (int64, error) {
 	admin.IsEnabled = isEnabled
 	return a.Txn.Update(admin)
 }
@@ -130,8 +129,8 @@ func (a Administrators) updateAdminEnabled(id int, isEnabled bool) revel.Result 
 }
 
 func (a Administrators) AdminDetail(id int) revel.Result {
-	var admin *models.Admin
-	var roles = make([]*models.Role, 0)
+	var admin *m.Admin
+	var roles = make([]*m.Role, 0)
 	allRoles := a.findRoles()
 	if id <= 0 {
 		roles = allRoles
@@ -163,7 +162,7 @@ func (a Administrators) AdminDetail(id int) revel.Result {
 	return a.Render(title, admin, roles)
 }
 
-func (a Administrators) SaveAdmin(admin models.Admin) revel.Result {
+func (a Administrators) SaveAdmin(admin m.Admin) revel.Result {
 	var (
 		// row     int64
 		err     error

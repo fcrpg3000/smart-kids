@@ -114,8 +114,8 @@ func TestCreateCountQueryCorrectly(t *testing.T) {
 	originalQuery := "select * from users u"
 	actual := CreateCountQuery(originalQuery)
 	target := "select count(*) from users u"
-	if target != actual {
-		t.Errorf("Creates count query error, actual: %s, target: %s", actual, target)
+	if target != actual && strings.ToLower(target) != strings.ToLower(actual) {
+		t.Errorf("Creates count query error, \nactual: %s, \ntarget: %s", actual, target)
 	} else {
 		t.Log("PASS")
 	}
@@ -125,6 +125,17 @@ func TestCreateCountQueryForCapitalLetterSQL(t *testing.T) {
 	query := "SELECT u.user_name FROM users u WHERE u.is_enabled = ?"
 	actual := CreateCountQuery(query)
 	target := "SELECT count(u.user_name) FROM users u WHERE u.is_enabled = ?"
+	if target != actual {
+		t.Errorf("Creates count query error, actual: %s, target: %s", actual, target)
+	} else {
+		t.Log("PASS")
+	}
+}
+
+func TestCreateCountQueryForMultiSelectSQL(t *testing.T) {
+	query := "SELECT u.user_id, u.user_name FROM users u WHERE u.is_enabled = ?"
+	actual := CreateCountQuery(query)
+	target := "SELECT count(*) FROM users u WHERE u.is_enabled = ?"
 	if target != actual {
 		t.Errorf("Creates count query error, actual: %s, target: %s", actual, target)
 	} else {
