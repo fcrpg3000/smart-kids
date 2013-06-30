@@ -72,21 +72,27 @@ func (c Application) DoLogin(adminName, password string) revel.Result {
 	}
 	admin := c.getAdmin(adminName)
 	if admin != nil {
-		sha1Hash := sha1.New()
-		var srcPassword string
-		if len(admin.Salt) == 0 {
-			srcPassword = fmt.Sprintf("%s{%s}", password, admin.AdminName)
+		if !admin.IsEnabled {
+			c.Flash.Error("用户(%s)已被禁用", adminName)
 		} else {
-			srcPassword = fmt.Sprintf("%s{%s}", password, admin.Salt)
+			sha1Hash := sha1.New()
+			var srcPassword string
+			if len(admin.Salt) == 0 {
+				srcPassword = fmt.Sprintf("%s{%s}", password, admin.AdminName)
+			} else {
+				srcPassword = fmt.Sprintf("%s{%s}", password, admin.Salt)
+			}
+			sha1Hash.Write([]byte(srcPassword))
+			if admin.HashPassword == hex.EncodeToString(sha1Hash.Sum(nil)) {
+				c.Session["AdminName"] = adminName
+				return c.Redirect(redirectUrl)
+			}
 		}
-		sha1Hash.Write([]byte(srcPassword))
-		if admin.HashPassword == hex.EncodeToString(sha1Hash.Sum(nil)) {
-			c.Session["AdminName"] = adminName
-			return c.Redirect(redirectUrl)
-		}
+	} else {
+		c.Flash.Error("用户名或密码错误！")
 	}
 	c.Flash.Out["adminName"] = adminName
-	c.Flash.Error("用户名或密码错误！")
+
 	if len(redirectUrl) > 0 && redirectUrl != routes.Application.Index() {
 		redirectUrl = util.AddParamsToUrl(routes.Application.Login(), map[string]string{
 			"redirectUrl": redirectUrl,
@@ -114,14 +120,16 @@ func (c Application) AddAdmin() revel.Result {
 // Intercepter method for every request
 func (c Application) checkLogin() revel.Result {
 	requestURI := c.Request.URL.Path
-	if requestURI == "/login" || requestURI == "/do_login" || requestURI == "/logout" ||
-		requestURI == "/" {
+	if requestURI == "/login" || requestURI == "/do_login" || requestURI == "/logout" {
 		return nil
 	}
 	if admin := c.connected(); admin == nil {
-		redirectUrl := util.AddParamsToUrl(routes.Application.Login(), map[string]string{
-			"redirectUrl": c.Request.URL.String(),
-		})
+		redirectUrl := routes.Application.Login()
+		if len(requestURI) > 0 && requestURI != "/" {
+			redirectUrl = util.AddParamsToUrl(routes.Application.Login(), map[string]string{
+				"redirectUrl": c.Request.URL.String(),
+			})
+		}
 		return c.Redirect(redirectUrl)
 	} else {
 		c.RenderArgs["adminUser"] = admin
@@ -149,7 +157,7 @@ func (c Application) getAdmin(adminName string) *models.Admin {
 }
 
 func (c Application) AddMenus() revel.Result {
-	if c.RenderArgs["adminser"] == nil {
+	if c.RenderArgs["adminUser"] == nil {
 		return nil
 	}
 	mainMenus := models.ToResources(c.Txn.Select(models.Resource{}, sqlMainMenus))

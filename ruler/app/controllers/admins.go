@@ -69,7 +69,7 @@ func (a Administrators) findRoles() []*m.Role {
 
 // Pagination admin
 func (a Administrators) AdminList(p int) revel.Result {
-	pageable, err := util.NewPageable(p, 2, util.ASC, []string{m.F_ADMIN_NAME})
+	pageable, err := util.NewPageable(p, DEFAULT_PAGE_SIZE, util.ASC, []string{m.F_ADMIN_NAME})
 	if err != nil { // never heppen
 		log.Fatalf("Error for %s", err.Error())
 		panic(err)
