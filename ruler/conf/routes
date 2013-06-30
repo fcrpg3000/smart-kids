@@ -22,9 +22,10 @@ GET     /admins/check_admin_name/:adminName     Administrators.CheckAdminName
 
 # Privileges
 GET     /privilege/res_list                     Privileges.ResourceList
+GET     /privilege/res_list/:p                  Privileges.ResourceList
 GET     /privilege/res_list/:p/:ps              Privileges.ResourceList
-GET     /privilege/res_edit/:id                 Privileges.ResourceEdit
 GET     /privilege/res_new                      Privileges.ResourceEdit
+GET     /privilege/res_edit/:id                 Privileges.ResourceEdit
 POST    /privilege/modify_res                   Privileges.SaveResource
 POST    /privilege/add_res                      Privileges.SaveResource
 

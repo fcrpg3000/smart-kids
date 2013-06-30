@@ -14,17 +14,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package util
+package controllers
 
 import (
-	"testing"
+	"fmt"
+	m "smart-kids/models"
+	q "smart-kids/query"
 )
 
-func TestSqlSort(t *testing.T) {
-	sort := NewSort(DESC, []string{"Name", "CreatedTime"})
-	if " ORDER BY Name DESC, CreatedTime DESC" != sort.SqlString() {
-		t.Error("Sort#SqlString testing Fail, Actual: ", sort.SqlString())
-	} else {
-		t.Log("PASS")
-	}
+type Users struct {
+	*Application
 }

@@ -26,8 +26,9 @@ import (
 func init() {
 	revel.OnAppStart(Init)
 	revel.InterceptMethod((*GorpController).Begin, revel.BEFORE)
-	revel.InterceptMethod(Application.checkLogin, revel.BEFORE)
-	revel.InterceptMethod(Application.AddMenus, revel.BEFORE)
+	// revel.InterceptMethod(Application.AddAdmin, revel.BEFORE)
+	// revel.InterceptMethod(Application.AddMenus, revel.BEFORE)
+	// revel.InterceptMethod(Hotels.checkUser, revel.BEFORE)
 	revel.InterceptMethod((*GorpController).Commit, revel.AFTER)
 	revel.InterceptMethod((*GorpController).Rollback, revel.FINALLY)
 
@@ -35,19 +36,4 @@ func init() {
 	revel.TemplateFuncs["ge"] = util.GreaterThanOrEqual
 	revel.TemplateFuncs["lt"] = util.LessThan
 	revel.TemplateFuncs["le"] = util.LessThanOrEqual
-	revel.TemplateFuncs["replaceAll"] = replaceAll
-}
-
-func replaceAll(src, old, newVal interface{}) string {
-	var newStr string
-	s := reflect.ValueOf(src).String()
-	o := reflect.ValueOf(old).String()
-	switch newVal.(type) {
-	case int, int8, int16, int32, int64:
-		newStr = string(reflect.ValueOf(newVal).Int())
-		break
-	default:
-		newStr = reflect.ValueOf(newVal).String()
-	}
-	return strings.Replace(s, o, newStr, 100)
 }

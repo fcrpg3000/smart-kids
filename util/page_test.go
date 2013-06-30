@@ -73,10 +73,7 @@ func TestBeanPage(t *testing.T) {
 		testBean{1, "Zone"},
 		testBean{3, "Amy"},
 	}
-	sort, err := NewSort(DESC, []string{"Id"})
-	if err != nil {
-		t.Error(err.Error())
-	}
+	sort := NewSort(DESC, []string{"Id"})
 	pageable, err := NewPageable0(1, 2, sort)
 	if err != nil {
 		t.Error(err.Error())

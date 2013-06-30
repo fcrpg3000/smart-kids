@@ -32,14 +32,7 @@ type Administrators struct {
 
 // Returns admin of the specified id.
 func (a Administrators) findAdmin(id int) *m.Admin {
-	obj, err := a.Txn.Get(m.Admin{}, id)
-	if err != nil {
-		panic(err)
-	}
-	if obj == nil {
-		return nil
-	}
-	return obj.(*m.Admin)
+	return m.ToAdmin(a.Txn.Get(m.Admin{}, id))
 }
 
 // Returns page admin of the pageable.
@@ -71,18 +64,7 @@ func (a Administrators) findAllAdmin(pageable *util.Pageable) *util.Page {
 
 // Returns all roles in application
 func (a Administrators) findRoles() []*m.Role {
-	interfaces, err := a.Txn.Select(m.Role{}, m.BASE_QUERY_ROLE)
-	if err != nil {
-		panic(err)
-	}
-	if len(interfaces) == 0 {
-		return make([]*m.Role, 0)
-	}
-	roles := make([]*m.Role, len(interfaces))
-	for i, obj := range interfaces {
-		roles[i] = obj.(*m.Role)
-	}
-	return roles
+	return m.ToRoles(a.Txn.Select(m.Role{}, m.BASE_QUERY_ROLE))
 }
 
 // Pagination admin

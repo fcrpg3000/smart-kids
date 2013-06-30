@@ -16,33 +16,34 @@
       <div class="control-group">
         <label class="control-label" for="txt_res_name">资源名称：</label>
         <div class="controls">
-          <input type="text" id="txt_res_name" name="res.Name" placeholder="资源名称" value="{{.res.Name}}">
+          <input type="text" id="txt_res_name" name="res.Name" placeholder="资源名称" value="{{if .res}}{{.res.Name}}{{end}}">
           <span class="help-inline hide" id="help_res_name" data-src-content="请输入资源名称！">请输入资源名称！</span>
         </div>
       </div>
       <div class="control-group">
         <label class="control-label" for="txt_res_code">编码标识：</label>
         <div class="controls">
-          <input type="text" id="txt_res_code" name="res.Code" placeholder="编码标识" value="{{.res.Code}}">
+          <input type="text" id="txt_res_code" name="res.Code" placeholder="编码标识" value="{{if .res}}{{.res.Code}}{{end}}">
           <span class="help-inline" id="help_res_code" data-src-content="例如：权限管理：ResourceEdit">例如：权限管理：ResourceEdit</span>
         </div>
       </div>
       <div class="control-group">
         <label class="control-label" for="txt_res_url">资源URI：</label>
         <div class="controls">
-          <input type="text" id="txt_res_url" name="res.Url" placeholder="资源URI" value="{{.res.Url}}">
+          <input type="text" id="txt_res_url" name="res.Url" placeholder="资源URI" value="{{if .res}}{{.res.Url}}{{end}}">
           <span class="help-inline" id="help_res_url" data-src-content="例如：/privilege/res_edit">例如：/privilege/res_edit</span>
         </div>
       </div>
       <div class="control-group">
         <label class="control-label" for="txt_res_desc">资源描述：</label>
         <div class="controls">
-          <input type="hidden" name="res.Desc.Valid" value="{{.res.Desc.Valid}}" />
-          <textarea id="txt_res_desc" name="res.Desc.String" placeholder="资源描述" rows="3">{{.res.Desc.String}}</textarea>
+          <input type="hidden" name="res.Desc.Valid" value="{{if .res}}{{.res.Desc.Valid}}{{else}}false{{end}}" />
+          <textarea id="txt_res_desc" name="res.Desc.String" placeholder="资源描述" rows="3">{{if .res}}{{.res.Desc.String}}{{end}}</textarea>
           <span class="help-inline" id="help_res_desc" data-src-content="请输入资源描述！">请输入资源描述！</span>
         </div>
       </div>
-      {{if or (and .res (gt .res.ParentId 0)) (not .res)}} {{/*-- (res != nil && res.ParentId > 0) || res == nil --*/}} {{ $resParentId := .res.ParentId }}
+      {{if .res}}{{set . "parentId" .res.ParentId}}{{else}}{{set . "parentId" -1}}{{end}}
+      {{if or (and .res (gt .parentId 0)) (not .res)}} {{/*-- (res != nil && res.ParentId > 0) || res == nil --*/}} {{ $resParentId := .res.ParentId }}
       <div class="control-group">
         <label class="control-label" for="cmb_res_parent">所属父资源：</label>
         <div class="controls">

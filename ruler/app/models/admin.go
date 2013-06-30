@@ -82,6 +82,31 @@ func (a *Admin) PostGet(exe gorp.SqlExecutor) error {
 	return nil
 }
 
+func ToAdmin(i interface{}, err error) *Admin {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*Admin)
+}
+
+func ToAdmins(results []interface{}, err error) []*Admin {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	admins := make([]*Admin, size)
+	if size == 0 {
+		return admins
+	}
+	for i, r := range results {
+		admins[i] = r.(*Admin)
+	}
+	return admins
+}
+
 const (
 	ROLE_TABLE  = "m_role"
 	F_ROLE_ID   = "role_id"
@@ -121,6 +146,31 @@ func (r *Role) PreInsert(_ gorp.SqlExecutor) error {
 func (r *Role) PreUpdate(_ gorp.SqlExecutor) error {
 	r.LastModifiedTime = mysql.NullTime{time.Now(), true}
 	return nil
+}
+
+func ToRole(i interface{}, err error) *Role {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*Role)
+}
+
+func ToRoles(results []interface{}, err error) []*Role {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	roles := make([]*Role, size)
+	if size == 0 {
+		return roles
+	}
+	for i, r := range results {
+		roles[i] = r.(*Role)
+	}
+	return roles
 }
 
 const (
@@ -179,4 +229,29 @@ func (r *Resource) PreInsert(_ gorp.SqlExecutor) error {
 func (r *Resource) PreUpdate(_ gorp.SqlExecutor) error {
 	r.LastModifiedTime = mysql.NullTime{time.Now(), true}
 	return nil
+}
+
+func ToResource(i interface{}, err error) *Resource {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*Resource)
+}
+
+func ToResources(results []interface{}, err error) []*Resource {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	resources := make([]*Resource, size)
+	if size == 0 {
+		return resources
+	}
+	for i, r := range results {
+		resources[i] = r.(*Resource)
+	}
+	return resources
 }

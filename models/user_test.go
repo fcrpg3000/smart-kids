@@ -42,7 +42,7 @@ func TestGender(t *testing.T) {
 }
 
 func TestNewUser(t *testing.T) {
-	user, err := NewUser("fcrpg2008", "11111111", Male, map[string]interface{}{
+	user, err := NewUser("fcrpg2008", "11111111", map[string]interface{}{
 		"Email": "fcrpg2005@gmail.com",
 	})
 	if err != nil {
@@ -51,7 +51,7 @@ func TestNewUser(t *testing.T) {
 		t.Log("NewUser success, user => ", user)
 	}
 
-	if user.Email != "fcrpg2005@gmail.com" {
+	if user.Email.Valid && user.Email.String != "fcrpg2005@gmail.com" {
 		t.Error("NewUser others property error. ")
 	} else {
 		t.Log("NewUser success, user => ", user)

@@ -18,6 +18,7 @@ package models
 
 import (
 	"fmt"
+	"github.com/go-sql-driver/mysql"
 	"testing"
 	"time"
 )
@@ -25,11 +26,11 @@ import (
 func TestDescription(t *testing.T) {
 	createdTime, _ := time.Parse("2006-01-02", "2013-06-15")
 	lastModifiedTime := createdTime
-	p := Posts{int64(1), int64(-1), "这里是内容！", createdTime, lastModifiedTime,
-		int64(1), "king4go", WEB.Id, nil, nil}
+	p := Posts{int64(1), int64(-1), int64(1), "king4go", "这里是内容！",
+		WEB.Id, mysql.NullTime{createdTime, true}, mysql.NullTime{lastModifiedTime, true}, nil, nil}
 	p.PostGet()
 	description := fmt.Sprintf("%s: %s %s From %s",
-		p.UserName, p.Content, p.CreatedTime.Format(time.RFC3339),
+		p.UserName, p.Content, p.CreatedTime.Time.Format(time.RFC3339),
 		p.Client.Name)
 	if p.Description() != description {
 		t.Error("#Description() format error. actual: ", description)

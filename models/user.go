@@ -17,22 +17,36 @@
 package models
 
 import (
-	"crypto"
 	"database/sql"
-	"encoding/hex"
+	_ "encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/coopernurse/gorp"
 	"github.com/go-sql-driver/mysql"
 	"github.com/robfig/revel"
+	"reflect"
 	"regexp"
+	"strings"
 	"time"
 )
 
+const (
+	USER_TABLE        = "sk_user"
+	USER_AVATAR_TABLE = "sk_user_avatar"
+	USER_INFO_TABLE   = "sk_user_info"
+	BANNED_USER_TABLE = "sk_banned_user"
+	// commons table fields
+	F_ID                 = "id"
+	F_USER_ID            = "user_id"
+	F_USER_NAME          = "user_name"
+	F_CREATED_TIME       = "created_time"
+	F_LAST_MODIFIED_TIME = "last_modified_time"
+)
+
 var (
-	Male         = &genderImpl{1, "男", "M"}
-	Female       = &genderImpl{2, "女", "F"}
-	SecretGender = &genderImpl{3, "保密", "N"}
+	Male         = Gender{1, "男", "M"}
+	Female       = Gender{2, "女", "F"}
+	SecretGender = Gender{3, "保密", "N"}
 	genderMap    = map[int]Gender{
 		1: Male,
 		2: Female,
@@ -49,58 +63,53 @@ func GenderOf(code int) Gender {
 	return SecretGender
 }
 
-type Gender interface {
-	// gender code value
-	Code() int
-	// gender name
-	Name() string
-	// gender alias
-	Alias() string
+type Gender struct {
+	Code  int    `json:"code"`
+	Name  string `json:"name"`
+	Alias string `json:"alias"`
 }
 
-type genderImpl struct {
-	code  int
-	name  string
-	alias string
+func (g Gender) String() string {
+	return fmt.Sprintf("Gender(%d,%s,%s)", g.Code, g.Name, g.Alias)
 }
 
-func (g genderImpl) Code() int {
-	return g.code
-}
+// User table fields
+const (
+	F_HASH_PASSWORD  = "hash_password"
+	F_PASSWORD_SALT  = "password_salt"
+	F_EMAIL          = "email"
+	F_COMMONLY_EMAIL = "commonly_email"
+)
 
-func (g genderImpl) Name() string {
-	return g.name
-}
+var (
+	UserFields = strings.Join([]string{
+		F_USER_ID, F_USER_NAME, F_HASH_PASSWORD, F_PASSWORD_SALT,
+		F_EMAIL, F_COMMONLY_EMAIL, F_CREATED_TIME, F_LAST_MODIFIED_TIME,
+	}, ", ")
+)
 
-func (g genderImpl) Alias() string {
-	return g.alias
-}
-
-func (g genderImpl) String() string {
-	return fmt.Sprintf("Gender(%d,%s,%s)", g.code, g.name, g.alias)
-}
-
+// User model for mapping table `sk_user`
 type User struct {
-	UserId           int64          `db:"user_id"`
-	UserName         string         `db:"user_name"`
-	HashPassword     string         `db:"hash_password"`
-	PasswordSalt     string         `db:"password_salt"`
-	GenderCode       int            `db:"gender"`
-	Email            sql.NullString `db:"email"`
-	CommonlyEmail    sql.NullString `db:"commonly_email"`
-	CreatedTime      mysql.NullTime `db:"created_time"`
-	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
+	UserId           int64          `db:"user_id" json:"uid"`
+	UserName         string         `db:"user_name" json:"userName"`
+	HashPassword     string         `db:"hash_password" json:"-"`
+	PasswordSalt     string         `db:"password_salt" json:"-"`
+	Email            sql.NullString `db:"email" json:"-"`
+	CommonlyEmail    sql.NullString `db:"commonly_email" json:"-"`
+	CreatedTime      mysql.NullTime `db:"created_time" json:"register"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time" json:"-"`
 
 	// Transient property
-	Password string `db:"-"`
-	Gender   Gender `db:"-"`
+	Password    string `db:"-" json:"-"`
+	EmailValue  string `db:"-" json:"email,omitempty"`
+	Email2Value string `db:"-" json:"email2,omitempty"`
 }
 
-func (u *User) String() string {
+func (u User) String() string {
 	return fmt.Sprintf("User(%d, %s, %s, %s)", u.UserId, u.UserName, u.HashPassword, u.Email)
 }
 
-func NewUser(userName string, password string, gender Gender, others map[string]interface{}) (*User, error) {
+func NewUser(userName string, password string, others map[string]interface{}) (*User, error) {
 	user := &User{}
 	timeNow := time.Now()
 	if len(userName) == 0 || len(password) == 0 {
@@ -108,7 +117,6 @@ func NewUser(userName string, password string, gender Gender, others map[string]
 	}
 	user.UserName = userName
 	user.Password = password
-	user.Gender = gender
 	user.CreatedTime = mysql.NullTime{timeNow, true}
 	user.LastModifiedTime = mysql.NullTime{timeNow, true}
 
@@ -121,7 +129,7 @@ func NewUser(userName string, password string, gender Gender, others map[string]
 			if len(val.(string)) != 0 {
 				user.Email = sql.NullString{val.(string), true}
 			} else {
-				user.Email = sql.NullString("", false)
+				user.Email = sql.NullString{"", false}
 			}
 			break
 		case "CommonlyEmail":
@@ -139,7 +147,6 @@ func NewUser(userName string, password string, gender Gender, others map[string]
 var userNameRegexp = regexp.MustCompile("^\\w+$")
 
 func (user *User) Validate(v *revel.Validation) {
-	v.Required(user.Gender)
 
 	v.Check(user.UserName,
 		revel.Required{},
@@ -160,14 +167,60 @@ func ValidatePassword(v *revel.Validation, password string) *revel.ValidationRes
 }
 
 func (u *User) PreInsert(_ gorp.SqlExecutor) error {
-	u.GenderCode = u.Gender.Code()
 	return nil
 }
 
 func (u *User) PostGet() error {
-	u.Gender = GenderOf(u.GenderCode)
+	if u.Email.Valid {
+		u.EmailValue = u.Email.String
+	}
+	if u.CommonlyEmail.Valid {
+		u.Email2Value = u.CommonlyEmail.String
+	}
 	return nil
 }
+
+func ToUser(i interface{}, err error) *User {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*User)
+}
+
+func ToUsers(results []interface{}, err error) []*User {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	users := make([]*User, size)
+	if size == 0 {
+		return users
+	}
+	for i, result := range results {
+		users[i] = result.(*User)
+	}
+	return users
+}
+
+const (
+	F_IMAGE_DOMAIN      = "image_domain"
+	F_AVATAR_PATH       = "avatar_path"
+	F_SRC_AVATAR_PATH   = "src_avatar_path"
+	F_SMALL_AVATAR_PATH = "small_avatar_path"
+	F_THUMB_AVATAR_PATH = "thumb_avatar_path"
+	F_AVATAR_NAME       = "avatar_name"
+)
+
+var (
+	UserAvatarFields = strings.Join([]string{
+		F_USER_ID, F_USER_NAME, F_IMAGE_DOMAIN, F_AVATAR_PATH,
+		F_SRC_AVATAR_PATH, F_SMALL_AVATAR_PATH, F_THUMB_AVATAR_PATH,
+		F_AVATAR_NAME, F_CREATED_TIME, F_LAST_MODIFIED_TIME,
+	}, ", ")
+)
 
 // UserAvatar struct
 // ----------------------------------------------------------------------------
@@ -180,24 +233,41 @@ type UserAvatar struct {
 	SrcAvatarPath    sql.NullString `db:"src_avatar_path"`   // source size
 	SmallAvatarPath  sql.NullString `db:"small_avatar_path"` // 80x80 maybe
 	ThumbAvatarPath  sql.NullString `db:"thumb_avatar_path"` // 40x40 maybe
-	AvatarName       string         `db:"avatar_name"`
+	AvatarName       sql.NullString `db:"avatar_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 }
 
+// Returns user's source avatar image url.
+func (u UserAvatar) SrcAvatarUrl() string {
+	if u.SrcAvatarPath.Valid {
+		return u.avatarUrlInternal(u.SrcAvatarPath.String)
+	}
+	return ""
+}
+
 // Returns user's normal avatar image url.
 func (u UserAvatar) AvatarUrl() string {
-	return u.avatarUrlInternal(u.AvatarPath)
+	if u.AvatarPath.Valid {
+		return u.avatarUrlInternal(u.AvatarPath.String)
+	}
+	return ""
 }
 
 // Returns user's small avatar image url.
 func (u UserAvatar) SmallAvatarUrl() string {
-	return u.avatarUrlInternal(u.SmallAvatarPath)
+	if u.SmallAvatarPath.Valid {
+		return u.avatarUrlInternal(u.SmallAvatarPath.String)
+	}
+	return ""
 }
 
 // Returns user's thumb avatar image url.
 func (u UserAvatar) ThumbAvatarUrl() string {
-	return u.avatarUrlInternal(u.ThumbAvatarPath)
+	if u.ThumbAvatarPath.Valid {
+		return u.avatarUrlInternal(u.ThumbAvatarPath.String)
+	}
+	return ""
 }
 
 // Returns user's avatar image url of the specified size path.
@@ -205,34 +275,129 @@ func (u UserAvatar) avatarUrlInternal(path string) string {
 	return fmt.Sprintf("http://%s%s%s", u.ImageDomain, path, u.AvatarName)
 }
 
+func ToUserAvatar(i interface{}, err error) *UserAvatar {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*UserAvatar)
+}
+
+func ToUserAvatars(results []interface{}, err error) []*UserAvatar {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	userAvatars := make([]*UserAvatar, size)
+	if size == 0 {
+		return userAvatars
+	}
+	for i, r := range results {
+		userAvatars[i] = r.(*UserAvatar)
+	}
+	return userAvatars
+}
+
+const (
+	F_OPERATOR_ID   = "operator_id"
+	F_OPERATOR_NAME = "operator_name"
+	F_CAUSE         = "banned_cause"
+	F_IS_PERMANENT  = "is_permanent"
+	F_BANNED_TIME   = "banned_time"
+	F_UNBAN_TIME    = "unban_time"
+)
+
+var (
+	BannedUserFields = strings.Join([]string{
+		F_ID, F_USER_ID, F_USER_NAME, F_OPERATOR_ID, F_OPERATOR_NAME,
+		F_CAUSE, F_IS_PERMANENT, F_BANNED_TIME, F_UNBAN_TIME,
+		F_CREATED_TIME, F_LAST_MODIFIED_TIME,
+	}, ", ")
+)
+
 // BannedUser struct
 // ----------------------------------------------------------------------------
 
 type BannedUser struct {
-	Id                 int64          `db:"id"`
-	UserId             int64          `db:"user_id"`
-	UserName           string         `db:"user_name"`
-	OperatorId         int64          `db:"operator_id"`
-	OperatorName       string         `db:"operator_name"`
-	Cause              string         `db:"banned_cause"`
-	IsPermanent        bool           `db:"is_permanent"`
-	BannedTime         mysql.NullTime `db:"banned_time"`
-	UnbanTime          mysql.NullTime `db:"unban_time"`
-	CreatedTime        mysql.NullTime `db:"created_time"`
-	LastModifiedTime   mysql.NullTime `db:"last_modified_time"`
-	LastModifiedById   int64          `db:"last_modified_by_id"`
-	LastModifiedByName string         `db:"last_modified_by_name"`
+	Id               int64          `db:"id"`
+	UserId           int64          `db:"user_id"`
+	UserName         string         `db:"user_name"`
+	OperatorId       int            `db:"operator_id"`
+	OperatorName     string         `db:"operator_name"`
+	Cause            string         `db:"banned_cause"`
+	IsPermanent      bool           `db:"is_permanent"`
+	BannedTime       mysql.NullTime `db:"banned_time"`
+	UnbanTime        mysql.NullTime `db:"unban_time"`
+	CreatedTime      mysql.NullTime `db:"created_time"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 }
 
 // BannedUser instance default string
-func (b *BannedUser) String() string {
+func (b BannedUser) String() string {
 	return fmt.Sprintf("BannedUser{Id=%d,Target=(%d, %s),Operator(%d, %s),"+
 		"Cause=\"%s\",Permanent=%v,Period=(%v - %v),"+
-		"LastModified=(time=%v, id=%d, name=%s)}",
+		"LastModified=%v}",
 		b.Id, b.UserId, b.UserName, b.OperatorId, b.OperatorName,
 		b.Cause, b.IsPermanent, b.BannedTime.Time, b.UnbanTime.Time,
-		b.LastModifiedTime.Time, b.LastModifiedById, b.LastModifiedByName)
+		b.LastModifiedTime.Time)
 }
+
+func ToBannedUser(i interface{}, err error) *BannedUser {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*BannedUser)
+}
+
+func ToBannedUsers(results []interface{}, err error) []*BannedUser {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	bannedUsers := make([]*BannedUser, size)
+	if size == 0 {
+		return bannedUsers
+	}
+	for i, r := range results {
+		bannedUsers[i] = r.(*BannedUser)
+	}
+	return bannedUsers
+}
+
+// sk_user_info fields constant
+const (
+	F_NICKNAME         = "nickname"
+	F_GENDER_CODE      = "gender_code"
+	F_CALENDAR_MODE    = "calendar_mode"
+	F_DATE_OF_BIRTH    = "date_of_birth"
+	F_HT_COUNTRY_ID    = "ht_country_id"
+	F_HT_STATE_ID      = "ht_state_id"
+	F_HT_CITY_ID       = "ht_city_id"
+	F_HT_DIST_ID       = "ht_dist_id"
+	F_POR_COUNTRY_ID   = "por_country_id"
+	F_POR_STATE_ID     = "por_state_id"
+	F_POR_CITY_ID      = "por_city_id"
+	F_POR_DIST_ID      = "por_dist_id"
+	F_OTHER_STATE      = "other_state"
+	F_EDU_ID           = "edu_id"
+	F_FEELING_ID       = "feeling_id"
+	F_BLOOD_TYPE_ID    = "blood_type_id"
+	F_CONSTELLATION_ID = "constellation_id"
+)
+
+var (
+	UserInfoFields = strings.Join([]string{
+		F_USER_ID, F_USER_NAME, F_NICKNAME, F_GENDER_CODE, F_CALENDAR_MODE,
+		F_DATE_OF_BIRTH, F_HT_COUNTRY_ID, F_HT_STATE_ID, F_HT_CITY_ID,
+		F_HT_DIST_ID, F_POR_COUNTRY_ID, F_POR_STATE_ID, F_POR_CITY_ID, F_POR_DIST_ID,
+		F_OTHER_STATE, F_EDU_ID, F_FEELING_ID, F_BLOOD_TYPE_ID, F_CONSTELLATION_ID,
+	}, ", ")
+)
 
 // UserInfo struct
 // ----------------------------------------------------------------------------
@@ -245,11 +410,11 @@ type UserInfo struct {
 	CalendarMode     int16          `db:"calendar_mode"`
 	DateOfBirthStr   sql.NullString `db:"date_of_birth" json:"-"`
 	HtCountryId      int            `db:"ht_country_id" json:"-"`
-	HtStateId        int            `db:"ht_state_id" json:"-"`
+	HtStateId        int            `db:"ht_province_id" json:"-"`
 	HtCityId         int            `db:"ht_city_id" json:"-"`
 	HtDistId         int            `db:"ht_dist_id" json:"-"`
 	PorCountryId     int            `db:"por_country_id" json:"-"`
-	PorStateId       int            `db:"por_state_id" json:"-"`
+	PorStateId       int            `db:"por_province_id" json:"-"`
 	PorCityId        int            `db:"por_city_id" json:"-"`
 	PorDistId        int            `db:"por_dist_id" json:"-"`
 	OtherState       sql.NullString `db:"other_state"`
@@ -357,8 +522,8 @@ func (u *UserInfo) PreInsert(_ gorp.SqlExecutor) error {
 		u.UserId = u.User.UserId
 		u.UserName = u.User.UserName
 	}
-	if u.Gender != nil {
-		u.GenderCode = u.Gender.Code()
+	if u.Gender.Code > 0 {
+		u.GenderCode = u.Gender.Code
 	}
 	if u.Hometown != nil {
 		if u.Hometown.Country != nil {
@@ -432,7 +597,7 @@ func (u *UserInfo) PostGet(exe gorp.SqlExecutor) error {
 		}
 	}
 	if u.GenderCode > 0 {
-		if u.Gender = GenderOf(u.GenderCode); u.Gender == nil {
+		if u.Gender = GenderOf(u.GenderCode); u.Gender.Code <= 0 {
 			return fmt.Errorf("Error GenderCode => %d", u.GenderCode)
 		}
 	}
@@ -442,4 +607,29 @@ func (u *UserInfo) PostGet(exe gorp.SqlExecutor) error {
 		}
 	}
 	return nil
+}
+
+func ToUserInfo(i interface{}, err error) *UserInfo {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*UserInfo)
+}
+
+func ToUserInfos(results []interface{}, err error) []*UserInfo {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	userInfos := make([]*UserInfo, size)
+	if size == 0 {
+		return userInfos
+	}
+	for i, r := range results {
+		userInfos[i] = r.(*UserInfo)
+	}
+	return userInfos
 }

@@ -27,12 +27,12 @@ import (
 type Posts struct {
 	Id               int64          `db:"posts_id"`
 	SrcId            int64          `db:"posts_src_id"`
-	Content          string         `db:"posts_content"`
-	CreatedTime      mysql.NullTime `db:"created_time"`
-	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 	UserId           int64          `db:"user_id"`
 	UserName         string         `db:"user_name"`
+	Content          string         `db:"posts_content"`
 	ClientType       int            `db:"client_type"`
+	CreatedTime      mysql.NullTime `db:"created_time"`
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
 	// Transient
 	Client *Client `db:"-" json:"client,omitempty"`

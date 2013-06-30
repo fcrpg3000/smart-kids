@@ -18,6 +18,7 @@ package models
 
 import (
 	"fmt"
+	"reflect"
 )
 
 type Client struct {
@@ -82,6 +83,31 @@ func (c Country) IdListKey() string {
 	return "country:id:list"
 }
 
+func ToCountry(i interface{}, err error) *Country {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*Country)
+}
+
+func ToCountries(results []interface{}, err error) []*Country {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	countries := make([]*Country, size)
+	if size == 0 {
+		return countries
+	}
+	for i, r := range results {
+		countries[i] = r.(*Country)
+	}
+	return countries
+}
+
 // province or state
 // mapped table `dict_province`
 type Province struct {
@@ -107,6 +133,31 @@ func (p Province) IdListKey() string {
 	return "province:id:list"
 }
 
+func ToProvince(i interface{}, err error) *Province {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*Province)
+}
+
+func ToProvinces(results []interface{}, err error) []*Province {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	provinces := make([]*Province, size)
+	if size == 0 {
+		return provinces
+	}
+	for i, r := range results {
+		provinces[i] = r.(*Province)
+	}
+	return provinces
+}
+
 // mapped table `dict_city`
 type City struct {
 	Id        int    `db:"id" json:"id"`
@@ -127,6 +178,31 @@ func (c City) CacheKey() string {
 
 func (p City) IdListKey() string {
 	return "city:id:list"
+}
+
+func ToCity(i interface{}, err error) *City {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*City)
+}
+
+func ToCities(results []interface{}, err error) []*City {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	cities := make([]*City, size)
+	if size == 0 {
+		return cities
+	}
+	for i, r := range results {
+		cities[i] = r.(*City)
+	}
+	return cities
 }
 
 // mapped table `dict_district`
@@ -152,6 +228,31 @@ func (d District) CacheKey() string {
 
 func (p District) IdListKey() string {
 	return "district:id:list"
+}
+
+func ToDistrict(i interface{}, err error) *District {
+	if err != nil {
+		panic(err)
+	}
+	if i == nil || reflect.ValueOf(i).IsNil() {
+		return nil
+	}
+	return i.(*District)
+}
+
+func ToDistricts(results []interface{}, err error) []*District {
+	if err != nil {
+		panic(err)
+	}
+	size := len(results)
+	districts := make([]*District, size)
+	if size == 0 {
+		return districts
+	}
+	for i, r := range results {
+		districts[i] = r.(*District)
+	}
+	return districts
 }
 
 // 所在地、位置信息

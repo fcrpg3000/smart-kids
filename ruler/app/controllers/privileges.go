@@ -17,6 +17,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"errors"
 	_ "fmt"
 	"github.com/robfig/revel"
@@ -60,8 +61,18 @@ func (c Privileges) findAllResource(pageable *util.Pageable) *util.Page {
 }
 
 func (p Privileges) findTopResources() []*m.Resource {
-	return loadResources(p.Txn.Select(m.Resource{}, m.BASE_QUERY_RESOURCE+
+	return m.ToResources(p.Txn.Select(m.Resource{}, m.BASE_QUERY_RESOURCE+
 		" WHERE parent_id <= 0"))
+}
+
+func (p Privileges) addResource(res *m.Resource) error {
+	if res.Id > 0 {
+		return errors.New("The resource already exists.")
+	}
+	admin := p.connected()
+	res.CreatedById = admin.Id
+	res.CreatedByName = sql.NullString{admin.AdminName, true}
+	return p.Txn.Insert(res)
 }
 
 func (p Privileges) updateResource(res *m.Resource) (int64, error) {
@@ -82,14 +93,7 @@ func (p Privileges) updateResource(res *m.Resource) (int64, error) {
 }
 
 func (p Privileges) loadResource(id int) *m.Resource {
-	obj, err := p.Txn.Get(m.Resource{}, id)
-	if err != nil {
-		panic(err)
-	}
-	if obj == nil {
-		return nil
-	}
-	return obj.(*m.Resource)
+	return m.ToResource(p.Txn.Get(m.Resource{}, id))
 }
 
 // Pagination resources
@@ -137,7 +141,7 @@ func (p Privileges) SaveResource(res m.Resource) revel.Result {
 	if res.Id > 0 { // Update
 		row, err = p.updateResource(&res)
 	} else {
-		err = p.Txn.Insert(&res)
+		err = p.addResource(&res)
 	}
 	if err != nil {
 		result = util.ErrorResult(p.Message("resource.errorEdit", err.Error()))
