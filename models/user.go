@@ -31,31 +31,30 @@ import (
 )
 
 const (
-	USER_TABLE        = "sk_user"
-	USER_AVATAR_TABLE = "sk_user_avatar"
-	USER_INFO_TABLE   = "sk_user_info"
-	BANNED_USER_TABLE = "sk_banned_user"
-	// commons table fields
-	F_ID                 = "id"
-	F_USER_ID            = "user_id"
-	F_USER_NAME          = "user_name"
-	F_CREATED_TIME       = "created_time"
-	F_LAST_MODIFIED_TIME = "last_modified_time"
+	USER_TABLE          = "sk_user"
+	USER_IDENTITY_TABLE = "sk_user_identity"
+	USER_DIGITAL_TABLE  = "sk_user_digital"
+	USER_AVATAR_TABLE   = "sk_user_avatar"
+	USER_INFO_TABLE     = "sk_user_info"
+	BANNED_USER_TABLE   = "sk_banned_user"
 )
 
 var (
-	Male         = Gender{1, "男", "M"}
-	Female       = Gender{2, "女", "F"}
-	SecretGender = Gender{3, "保密", "N"}
-	genderMap    = map[int]Gender{
-		1: Male,
-		2: Female,
-		3: SecretGender}
+	Male         = Gender{int16(1), "男", "M"}
+	Female       = Gender{int16(2), "女", "F"}
+	SecretGender = Gender{int16(3), "保密", "N"}
+	genderMap    = map[int16]Gender{
+		int16(1): Male,
+		int16(2): Female,
+		int16(3): SecretGender}
 
 	emptyNameAndPwd = errors.New("The userName and password must not be empty.")
+
+	InsufficientBalanceError = errors.New("Insufficient.balance")
+	InsufficientScoreError   = errors.New("Insufficient.score")
 )
 
-func GenderOf(code int) Gender {
+func GenderOf(code int16) Gender {
 	gender, exists := genderMap[code]
 	if exists {
 		return gender
@@ -64,7 +63,7 @@ func GenderOf(code int) Gender {
 }
 
 type Gender struct {
-	Code  int    `json:"code"`
+	Code  int16  `json:"code"`
 	Name  string `json:"name"`
 	Alias string `json:"alias"`
 }
@@ -75,73 +74,37 @@ func (g Gender) String() string {
 
 // User table fields
 const (
-	F_HASH_PASSWORD  = "hash_password"
-	F_PASSWORD_SALT  = "password_salt"
-	F_EMAIL          = "email"
-	F_COMMONLY_EMAIL = "commonly_email"
+	F_HASH_PASSWORD = "hash_password"
+	F_PASSWORD_SALT = "password_salt"
+	F_EMAIL         = "email"
+	F_SPARE_EMAIL   = "spare_email"
+	F_GENDER_CODE   = "gender_code"
 )
 
 var (
 	UserFields = strings.Join([]string{
 		F_USER_ID, F_USER_NAME, F_HASH_PASSWORD, F_PASSWORD_SALT,
-		F_EMAIL, F_COMMONLY_EMAIL, F_CREATED_TIME, F_LAST_MODIFIED_TIME,
+		F_EMAIL, F_SPARE_EMAIL, F_CREATED_TIME, F_LAST_MODIFIED_TIME,
 	}, ", ")
 )
 
 // User model for mapping table `sk_user`
 type User struct {
-	UserId           int64          `db:"user_id" json:"uid"`
-	UserName         string         `db:"user_name" json:"userName"`
+	UserId           uint64         `db:"user_id" json:"uid"`
+	Email            string         `db:"email" json:"-"`        // login account
+	UserName         string         `db:"user_name" json:"name"` // user name
 	HashPassword     string         `db:"hash_password" json:"-"`
 	PasswordSalt     string         `db:"password_salt" json:"-"`
-	Email            sql.NullString `db:"email" json:"-"`
-	CommonlyEmail    sql.NullString `db:"commonly_email" json:"-"`
-	CreatedTime      mysql.NullTime `db:"created_time" json:"register"`
+	SpareEmail       sql.NullString `db:"spare_email" json:"-"`
+	CreatedTime      mysql.NullTime `db:"created_time" json:"created"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time" json:"-"`
 
 	// Transient property
-	Password    string `db:"-" json:"-"`
-	EmailValue  string `db:"-" json:"email,omitempty"`
-	Email2Value string `db:"-" json:"email2,omitempty"`
+	Password string `db:"-" json:"-"`
 }
 
 func (u User) String() string {
 	return fmt.Sprintf("User(%d, %s, %s, %s)", u.UserId, u.UserName, u.HashPassword, u.Email)
-}
-
-func NewUser(userName string, password string, others map[string]interface{}) (*User, error) {
-	user := &User{}
-	timeNow := time.Now()
-	if len(userName) == 0 || len(password) == 0 {
-		return nil, emptyNameAndPwd
-	}
-	user.UserName = userName
-	user.Password = password
-	user.CreatedTime = mysql.NullTime{timeNow, true}
-	user.LastModifiedTime = mysql.NullTime{timeNow, true}
-
-	if len(others) == 0 {
-		return user, nil
-	}
-	for key, val := range others {
-		switch key {
-		case "Email":
-			if len(val.(string)) != 0 {
-				user.Email = sql.NullString{val.(string), true}
-			} else {
-				user.Email = sql.NullString{"", false}
-			}
-			break
-		case "CommonlyEmail":
-			if len(val.(string)) != 0 {
-				user.CommonlyEmail = sql.NullString{val.(string), true}
-			} else {
-				user.CommonlyEmail = sql.NullString{"", false}
-			}
-			break
-		}
-	}
-	return user, nil
 }
 
 var userNameRegexp = regexp.MustCompile("^\\w+$")
@@ -171,12 +134,7 @@ func (u *User) PreInsert(_ gorp.SqlExecutor) error {
 }
 
 func (u *User) PostGet() error {
-	if u.Email.Valid {
-		u.EmailValue = u.Email.String
-	}
-	if u.CommonlyEmail.Valid {
-		u.Email2Value = u.CommonlyEmail.String
-	}
+
 	return nil
 }
 
@@ -205,6 +163,179 @@ func ToUsers(results []interface{}, err error) []*User {
 	return users
 }
 
+// UserDigital struct
+// ----------------------------------------------------------------------------
+
+const (
+	F_TOTAL_SCORE           = "total_score"
+	F_SCORE                 = "user_score"
+	F_GRADE                 = "user_grade"
+	F_TOTAL_AMOUNT          = "total_amount"
+	F_BALANCE               = "balance"
+	F_THREADS               = "threads"
+	F_POSTS                 = "posts"
+	F_POSTS_REPLIES         = "posts_replies"
+	F_NEWS_COMMENTS         = "news_comments"
+	F_IMAGE_COMMENTS        = "image_comments"
+	F_IMAGE_COMMENT_REPLIES = "image_comment_replies"
+)
+
+var (
+	UserDigitalFields = strings.Join([]string{
+		F_USER_ID, F_USER_NAME, F_TOTAL_SCORE, F_SCORE, F_GRADE,
+		F_TOTAL_AMOUNT, F_BALANCE, F_THREADS, F_POSTS, F_POSTS_REPLIES,
+		F_NEWS_COMMENTS, F_IMAGE_COMMENTS, F_IMAGE_COMMENT_REPLIES,
+		F_LAST_MODIFIED_TIME,
+	}, ", ")
+)
+
+type UserDigital struct {
+	UserId              uint64         `db:"user_id"`
+	UserName            string         `db:"user_name"`
+	TotalScore          uint64         `db:"total_score"`
+	Score               uint64         `db:"user_score"`
+	Grade               uint           `db:"user_grade"`
+	TotalAmount         uint64         `db:"total_amount"`
+	Balance             uint64         `db:"balance"`
+	Threads             uint           `db:"threads"`
+	Posts               uint           `db:"posts"`
+	PostsReplies        uint           `db:"posts_replies"`
+	NewsComments        uint           `db:"news_comments"`
+	ImageComments       uint           `db:"image_comments"`
+	ImageCommentReplies uint           `db:"image_comment_replies"`
+	LastModifiedTime    mysql.NullTime `db:"last_modified_time"`
+}
+
+func NewDigital(user *User) *UserDigital {
+	digital := &UserDigital{UserId: user.UserId, UserName: user.UserName}
+	return digital
+}
+
+// Add the score, and the total score.
+func (u *UserDigital) AddScore(score uint64) *UserDigital {
+	u.TotalScore = u.TotalScore + score
+	u.Score = u.Score + score
+	return u
+}
+
+// Add current and total score, and Returns old total score and old current score.
+func (u *UserDigital) AddAndGetOldScore(score uint64) (oldTotalScore uint64, oldScore uint64) {
+	oldTotalScore = u.TotalScore
+	oldScore = u.Score
+	u.AddScore(score)
+	return oldTotalScore, oldScore
+}
+
+// Subtract the score, but not change total score.
+func (u *UserDigital) SubtractScore(score uint64) (uint64, error) {
+	oldScore := u.Score
+	if u.Score < score {
+		return oldScore, InsufficientScoreError
+	}
+	u.Score = u.Score - score
+	return oldScore, nil
+}
+
+func (u *UserDigital) IncrementGrade() *UserDigital {
+	u.Grade = u.Grade + 1
+	return u
+}
+
+func (u *UserDigital) AddBalance(delta uint64) *UserDigital {
+	u.Balance = u.Balance + delta
+	u.TotalAmount = u.TotalAmount + delta
+	return u
+}
+
+func (u *UserDigital) SubtractBalance(subtrahend uint64) (uint64, error) {
+	oldBalance := u.Balance
+	if u.Balance < subtrahend {
+		return oldBalance, InsufficientBalanceError
+	}
+	u.Balance = u.Balance - subtrahend
+	return oldBalance, nil
+}
+
+func (u UserDigital) String() string {
+	return fmt.Sprintf("UserDigital{UserId=%d, UserName=%s, TotalScore=%d, "+
+		"Score=%d, Grade=%d, TotalAmount=%d, Balance=%d, Threads=%d, Posts=%d, "+
+		"PostsReplies=%d, NewsComments=%d, ImageComments=%d, ImageCommentReplies=%d, "+
+		"LastModifiedTime=%v}", u.UserId, u.UserName, u.TotalScore, u.Score,
+		u.Grade, u.TotalAmount, u.Balance, u.Threads, u.Posts, u.PostsReplies,
+		u.NewsComments, u.ImageComments, u.ImageCommentReplies, u.LastModifiedTime)
+}
+
+// UserIdentity struct
+// ----------------------------------------------------------------------------
+
+// UserIdentity table field name constants
+const (
+	F_READ_NAME     = "real_name"
+	F_IDCARD        = "idcard"
+	F_IS_VARIFIED   = "is_varified"
+	F_ID_IMG_DOMAIN = "id_img_domain"
+	F_ID_IMG_PATH   = "id_img_path"
+	F_VARIFIED_DATE = "varified_date"
+)
+
+// UserIdentity variables
+var (
+	UserIdentityFields = strings.Join([]string{
+		F_USER_ID, F_READ_NAME, F_GENDER_CODE, F_IDCARD, F_IS_VARIFIED,
+		F_ID_IMG_DOMAIN, F_ID_IMG_PATH, F_VARIFIED_DATE, F_LAST_MODIFIED_TIME,
+	}, ", ")
+)
+
+type UserIdentity struct {
+	UserId           uint64         `db:"user_id"`
+	RealName         string         `db:"real_name"` // user real name
+	GenderCode       int16          `db:"gender_code"`
+	Idcard           string         `db:"idcard"`      // identity card number
+	IsVarified       bool           `db:"is_varified"` // 0 or 1 in db
+	IdImgDomain      sql.NullString `db:"id_img_domain"`
+	IdImgPath        sql.NullString `db:"id_img_path"`
+	VarifiedDate     mysql.NullTime `db:"varified_date"` // 0000-00-00 in db
+	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
+
+	Gender Gender `db:"-"`
+}
+
+func (u *UserIdentity) String() string {
+	return fmt.Sprintf("UserIdentity{UserId=%d, RealName=%s, Idcard=%s, "+
+		"IsVarified=%v, IdImgDomain=%v, IdImgPath=%v, VarifiedDate=%v, LastModifiedTime=%v}",
+		u.UserId, u.RealName, u.Idcard, u.IsVarified, u.IdImgDomain, u.IdImgPath,
+		u.VarifiedDate, u.LastModifiedTime)
+}
+
+func (u *UserIdentity) PreInsert(_ gorp.SqlExecutor) error {
+	timeNow := time.Now()
+	if u.IdImgDomain.Valid && u.IdImgPath.Valid && len(u.Idcard) > 0 &&
+		len(u.RealName) > 0 {
+		u.IsVarified = true
+		u.VarifiedDate = mysql.NullTime{timeNow, true}
+	}
+	if u.Gender.Code > int16(0) {
+		u.GenderCode = u.Gender.Code
+	}
+	u.LastModifiedTime = mysql.NullTime{timeNow, true}
+	return nil
+}
+
+func (u *UserIdentity) PostGet(_ gorp.SqlExecutor) error {
+	if u.GenderCode > 0 {
+		u.Gender = GenderOf(u.GenderCode)
+	}
+	return nil
+}
+
+func (u UserIdentity) IdImageUrl() string {
+	if !u.IsVarified {
+		return ""
+	}
+	return fmt.Sprintf("%s%s", u.IdImgDomain, u.IdImgPath)
+}
+
+// UserAvatar table field name constants.
 const (
 	F_IMAGE_DOMAIN      = "image_domain"
 	F_AVATAR_PATH       = "avatar_path"
@@ -214,6 +345,7 @@ const (
 	F_AVATAR_NAME       = "avatar_name"
 )
 
+// UserAvatar variables
 var (
 	UserAvatarFields = strings.Join([]string{
 		F_USER_ID, F_USER_NAME, F_IMAGE_DOMAIN, F_AVATAR_PATH,
@@ -226,7 +358,8 @@ var (
 // ----------------------------------------------------------------------------
 
 type UserAvatar struct {
-	UserId           string         `db:"user_id"`
+	Id               uint64         `db:"id"`
+	UserId           uint64         `db:"user_id"`
 	UserName         string         `db:"user_name"`
 	ImageDomain      string         `db:"image_domain"`
 	AvatarPath       sql.NullString `db:"avatar_path"`       // 150x150 maybe
@@ -300,79 +433,9 @@ func ToUserAvatars(results []interface{}, err error) []*UserAvatar {
 	return userAvatars
 }
 
-const (
-	F_OPERATOR_ID   = "operator_id"
-	F_OPERATOR_NAME = "operator_name"
-	F_CAUSE         = "banned_cause"
-	F_IS_PERMANENT  = "is_permanent"
-	F_BANNED_TIME   = "banned_time"
-	F_UNBAN_TIME    = "unban_time"
-)
-
-var (
-	BannedUserFields = strings.Join([]string{
-		F_ID, F_USER_ID, F_USER_NAME, F_OPERATOR_ID, F_OPERATOR_NAME,
-		F_CAUSE, F_IS_PERMANENT, F_BANNED_TIME, F_UNBAN_TIME,
-		F_CREATED_TIME, F_LAST_MODIFIED_TIME,
-	}, ", ")
-)
-
-// BannedUser struct
-// ----------------------------------------------------------------------------
-
-type BannedUser struct {
-	Id               int64          `db:"id"`
-	UserId           int64          `db:"user_id"`
-	UserName         string         `db:"user_name"`
-	OperatorId       int            `db:"operator_id"`
-	OperatorName     string         `db:"operator_name"`
-	Cause            string         `db:"banned_cause"`
-	IsPermanent      bool           `db:"is_permanent"`
-	BannedTime       mysql.NullTime `db:"banned_time"`
-	UnbanTime        mysql.NullTime `db:"unban_time"`
-	CreatedTime      mysql.NullTime `db:"created_time"`
-	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
-}
-
-// BannedUser instance default string
-func (b BannedUser) String() string {
-	return fmt.Sprintf("BannedUser{Id=%d,Target=(%d, %s),Operator(%d, %s),"+
-		"Cause=\"%s\",Permanent=%v,Period=(%v - %v),"+
-		"LastModified=%v}",
-		b.Id, b.UserId, b.UserName, b.OperatorId, b.OperatorName,
-		b.Cause, b.IsPermanent, b.BannedTime.Time, b.UnbanTime.Time,
-		b.LastModifiedTime.Time)
-}
-
-func ToBannedUser(i interface{}, err error) *BannedUser {
-	if err != nil {
-		panic(err)
-	}
-	if i == nil || reflect.ValueOf(i).IsNil() {
-		return nil
-	}
-	return i.(*BannedUser)
-}
-
-func ToBannedUsers(results []interface{}, err error) []*BannedUser {
-	if err != nil {
-		panic(err)
-	}
-	size := len(results)
-	bannedUsers := make([]*BannedUser, size)
-	if size == 0 {
-		return bannedUsers
-	}
-	for i, r := range results {
-		bannedUsers[i] = r.(*BannedUser)
-	}
-	return bannedUsers
-}
-
 // sk_user_info fields constant
 const (
 	F_NICKNAME         = "nickname"
-	F_GENDER_CODE      = "gender_code"
 	F_CALENDAR_MODE    = "calendar_mode"
 	F_DATE_OF_BIRTH    = "date_of_birth"
 	F_HT_COUNTRY_ID    = "ht_country_id"
@@ -403,10 +466,9 @@ var (
 // ----------------------------------------------------------------------------
 
 type UserInfo struct {
-	UserId           int64          `db:"user_id" json:"uid"`        // not autoincrement
+	UserId           uint64         `db:"user_id" json:"uid"`        // not autoincrement
 	UserName         string         `db:"user_name" json:"userName"` // just redundancy field
 	Nickname         sql.NullString `db:"nickname" json:"nickname,omitempty"`
-	GenderCode       int            `db:"gender_code"`
 	CalendarMode     int16          `db:"calendar_mode"`
 	DateOfBirthStr   sql.NullString `db:"date_of_birth" json:"-"`
 	HtCountryId      int            `db:"ht_country_id" json:"-"`
@@ -426,7 +488,6 @@ type UserInfo struct {
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
 	// Transient
-	Gender           Gender         `db:"-" json:"gender,omitempty"`
 	DateOfBirth      time.Time      `db:"-" json:"dateOfBirth,omitempty"`
 	User             *User          `db:"-" json:"user,omitempty"`
 	Hometown         *Location      `db:"-" json:"hometown,omitempty"`
@@ -498,12 +559,6 @@ func (u *UserInfoBuilder) Constellation(constellation *Constellation) *UserInfoB
 	return u
 }
 
-// Set a Gender for this builder
-func (u *UserInfoBuilder) Gender(gender Gender) *UserInfoBuilder {
-	u.userInfo.Gender = gender
-	return u
-}
-
 // Set date of birth and calendar mode for this builder
 func (u *UserInfoBuilder) DateOfBirth(dateOfBirth time.Time, mode int16) *UserInfoBuilder {
 	u.userInfo.DateOfBirth = dateOfBirth
@@ -521,9 +576,6 @@ func (u *UserInfo) PreInsert(_ gorp.SqlExecutor) error {
 	if u.User != nil {
 		u.UserId = u.User.UserId
 		u.UserName = u.User.UserName
-	}
-	if u.Gender.Code > 0 {
-		u.GenderCode = u.Gender.Code
 	}
 	if u.Hometown != nil {
 		if u.Hometown.Country != nil {
@@ -594,11 +646,6 @@ func (u *UserInfo) PostGet(exe gorp.SqlExecutor) error {
 	if u.ConstellationId > 0 {
 		if u.Constellation = ConstellationOf(u.ConstellationId); u.Constellation == nil {
 			return fmt.Errorf("Error ConstellationId => %d", u.ConstellationId)
-		}
-	}
-	if u.GenderCode > 0 {
-		if u.Gender = GenderOf(u.GenderCode); u.Gender.Code <= 0 {
-			return fmt.Errorf("Error GenderCode => %d", u.GenderCode)
 		}
 	}
 	if u.DateOfBirthStr.Valid {

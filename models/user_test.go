@@ -41,25 +41,6 @@ func TestGender(t *testing.T) {
 	}
 }
 
-func TestNewUser(t *testing.T) {
-	user, err := NewUser("fcrpg2008", "11111111", map[string]interface{}{
-		"Email": "fcrpg2005@gmail.com",
-	})
-	if err != nil {
-		t.Error("NewUser error, cause: ", err.Error())
-	} else {
-		t.Log("NewUser success, user => ", user)
-	}
-
-	if user.Email.Valid && user.Email.String != "fcrpg2005@gmail.com" {
-		t.Error("NewUser others property error. ")
-	} else {
-		t.Log("NewUser success, user => ", user)
-	}
-
-	fmt.Println("NewUser success, user => ", user.String())
-}
-
 func TestHashPassword(t *testing.T) {
 	sha1Hash := sha1.New()
 	sha1Hash.Write([]byte(fmt.Sprintf("admin{%s}", "admin")))

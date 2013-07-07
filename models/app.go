@@ -47,11 +47,6 @@ const (
 	F_IS_TRUSTED  = "is_trusted"
 )
 
-const (
-	PARAM_CLIENT_ID     = "client_id"
-	PARAM_CLIENT_SECRET = "client_secret"
-)
-
 // Developer's typeId and ImType enumeration
 const (
 	DT_PERSONAL  = int16(1) // 个人

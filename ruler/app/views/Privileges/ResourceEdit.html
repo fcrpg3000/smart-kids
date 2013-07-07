@@ -37,13 +37,13 @@
       <div class="control-group">
         <label class="control-label" for="txt_res_desc">资源描述：</label>
         <div class="controls">
-          <input type="hidden" name="res.Desc.Valid" value="{{if .res}}{{.res.Desc.Valid}}{{else}}false{{end}}" />
+          <input type="hidden" id="txt_desc_valid" name="res.Desc.Valid" value="{{if .res}}{{.res.Desc.Valid}}{{else}}false{{end}}" />
           <textarea id="txt_res_desc" name="res.Desc.String" placeholder="资源描述" rows="3">{{if .res}}{{.res.Desc.String}}{{end}}</textarea>
           <span class="help-inline" id="help_res_desc" data-src-content="请输入资源描述！">请输入资源描述！</span>
         </div>
       </div>
       {{if .res}}{{set . "parentId" .res.ParentId}}{{else}}{{set . "parentId" -1}}{{end}}
-      {{if or (and .res (gt .parentId 0)) (not .res)}} {{/*-- (res != nil && res.ParentId > 0) || res == nil --*/}} {{ $resParentId := .res.ParentId }}
+      {{ $resParentId := .res.ParentId }}
       <div class="control-group">
         <label class="control-label" for="cmb_res_parent">所属父资源：</label>
         <div class="controls">
@@ -52,12 +52,12 @@
             {{range .topResources}}
             <option value="{{.Id}}"{{if eq $resParentId .Id}} selected="selected"{{end}} data-url="{{.Url}}">{{.Name}}</option>{{end}}
           </select>
-          <span class="help-inline" id="help_res_parent">{{.res.Parent.Url}}</span>
+          <span class="help-inline" id="help_res_parent">{{if .res.Parent}}{{.res.Parent.Url}}{{end}}</span>
         </div>
-      </div>{{end}}
+      </div>
       <div class="control-group">
         <div class="controls">
-          {{set . "isMenu" false}} {{if .res}}{{set . "isMenu" .res.IsMenu}}{{end}}
+          {{set . "isMenu" false}} {{if or .res.IsMenu (not .res)}}{{set . "isMenu" true}}{{end}}
           <input type="hidden" id="txt_is_menu" name="res.IsMenu" value="{{.isMenu}}" />
           <label class="checkbox">
             <input type="checkbox" id="chk_is_menu" {{if or .res.IsMenu (not .res)}}checked="checked"{{end}}/> 是否为菜单项

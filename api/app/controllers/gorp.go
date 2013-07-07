@@ -57,6 +57,10 @@ func initUsers() {
 	})
 	t.ColMap("UserName").SetUnique(true)
 
+	// Register UserDigital model
+	t = Dbm.AddTableWithName(models.UserDigital{}, models.USER_DIGITAL_TABLE).SetKeys(false, "UserId")
+	setColumnSizes(t, map[string]int{"UserName": 50})
+
 	// Register UserInfo model
 	t = Dbm.AddTableWithName(models.UserInfo{}, models.USER_INFO_TABLE).SetKeys(false, "UserId")
 	setColumnSizes(t, map[string]int{
@@ -67,7 +71,7 @@ func initUsers() {
 	})
 
 	// Register UserAvatar model
-	t = Dbm.AddTableWithName(models.UserAvatar{}, models.USER_AVATAR_TABLE).SetKeys(false, "UserId")
+	t = Dbm.AddTableWithName(models.UserAvatar{}, models.USER_AVATAR_TABLE).SetKeys(false, "Id")
 	setColumnSizes(t, map[string]int{
 		"UserName":        50,
 		"ImageDomain":     100,

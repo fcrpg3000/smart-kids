@@ -17,6 +17,7 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -46,6 +47,11 @@ var (
 	countMatchRegexp = regexp.MustCompile(fmt.Sprintf("((?i:select)\\s+((distinct )?(.+?)?)\\s+)?((?i:from)\\s+"+
 		"%s(?:\\s+as)?\\s+)%s(.*)", identifier, identifierGroup))
 	fromMatchRegexp = regexp.MustCompile("(?i:from)")
+)
+
+// error variables
+var (
+	defaultSortError = errors.New("The pageable's sort is nil, the default sort must not be nil.")
 )
 
 // inner set implementation
@@ -259,4 +265,38 @@ func getOrderClause(joinAliases []string, alias string, order *util.Order) strin
 		wrapped = reference
 	}
 	return fmt.Sprintf("%s %s", wrapped, strings.ToLower(order.Direction))
+}
+
+type SqlBuilder struct {
+	sqlParts []string
+}
+
+func (s *SqlBuilder) Append(str string) *SqlBuilder {
+	s.sqlParts = append(s.sqlParts, str)
+	return s
+}
+
+func (s SqlBuilder) ToSqlString() string {
+	return strings.Join(s.sqlParts, "")
+}
+
+func NewSqlBuilder(base string) *SqlBuilder {
+	sqlBuilder := &SqlBuilder{}
+	if len(base) > 0 {
+		return sqlBuilder.Append(base)
+	}
+	return sqlBuilder
+}
+
+func (s *SqlBuilder) PageOrderBy(pageable *util.Pageable, defaultSort *util.Sort) *SqlBuilder {
+	sort := pageable.Sort
+	if sort == nil || reflect.ValueOf(sort).IsNil() {
+		if defaultSort == nil || reflect.ValueOf(defaultSort).IsNil() {
+			panic(defaultSortError)
+		}
+		sort = defaultSort
+	}
+	s.Append(sort.SqlString())
+	s.Append(fmt.Sprintf(" LIMIT %d, %d", pageable.Offset, pageable.PageSize))
+	return s
 }

@@ -19,7 +19,7 @@ package controllers
 import (
 	"database/sql"
 	"errors"
-	_ "fmt"
+	"fmt"
 	"github.com/robfig/revel"
 	"log"
 	_ "reflect"
@@ -72,6 +72,7 @@ func (p Privileges) addResource(res *m.Resource) error {
 	admin := p.connected()
 	res.CreatedById = admin.Id
 	res.CreatedByName = sql.NullString{admin.AdminName, true}
+	fmt.Println("New resource: ", res)
 	return p.Txn.Insert(res)
 }
 
@@ -89,6 +90,7 @@ func (p Privileges) updateResource(res *m.Resource) (int64, error) {
 	existsRes.Desc = res.Desc
 	existsRes.ParentId = res.ParentId
 	existsRes.IsMenu = res.IsMenu
+	fmt.Println("Updated resource: ", res)
 	return p.Txn.Update(existsRes)
 }
 
@@ -106,26 +108,24 @@ func (c Privileges) ResourceList(p, ps int) revel.Result {
 	if err != nil {
 		panic(err)
 	}
+	title := c.Message("resource.title.list")
 	pageResource := c.findAllResource(pageable)
-	return c.Render(pageResource)
+	return c.Render(title, pageResource)
 }
 
 // Resource edit page
 func (p Privileges) ResourceEdit(id int) revel.Result {
-	var topResources []*m.Resource
+	topResources := p.findTopResources()
 	title := p.Message("ResourceEdit.title.creation")
 	if id <= 0 {
-		topResources = p.findTopResources()
 		return p.Render(title, topResources)
 	}
 	res := p.loadResource(id)
 	if res == nil {
-		topResources = p.findTopResources()
 		return p.Render(title, topResources)
 	}
 	if res.ParentId > 0 {
 		res.Parent = p.loadResource(res.ParentId)
-		topResources = p.findTopResources()
 	}
 	title = p.Message("ResourceEdit.title.edit", res.Name)
 	return p.Render(title, res, topResources)
@@ -137,16 +137,19 @@ func (p Privileges) SaveResource(res m.Resource) revel.Result {
 		err    error
 		row    int64
 		result *util.ResponseResult
+		update bool
 	)
 	if res.Id > 0 { // Update
+		update = true
 		row, err = p.updateResource(&res)
 	} else {
+		update = false
 		err = p.addResource(&res)
 	}
 	if err != nil {
 		result = util.ErrorResult(p.Message("resource.errorEdit", err.Error()))
 	} else {
-		if row <= 0 {
+		if row <= 0 && update {
 			result = util.FailureResult(p.NotFoundMessage("权限资源信息"))
 		} else {
 			result = util.SuccessResult(p.Message("resource.successEdit", res.Name))

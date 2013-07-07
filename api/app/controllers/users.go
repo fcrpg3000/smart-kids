@@ -18,10 +18,15 @@ package controllers
 
 import (
 	"fmt"
+	"github.com/robfig/revel"
 	m "smart-kids/models"
 	q "smart-kids/query"
 )
 
 type Users struct {
 	*Application
+}
+
+func (u *Users) Register(user *User) revel.Result {
+
 }

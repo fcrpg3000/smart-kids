@@ -46,12 +46,13 @@ func (o OAuth) getAppSession(appId int64, loader func(int64) *m.AppSession) *m.A
 	return appSession
 }
 
+func (o OAuth) getAppSessionIfPresent(appId int64) *m.AppSession {
+	return m.ToAppSession(o.Txn.Get(m.AppSession{}, appId))
+}
+
 // API authoirze
 func (o OAuth) Authorize() revel.Result {
 	clientId, _ := o.GetClientInfo()
-	if len(clientId) == 0 {
-		clientId = o.Params.Get(m.PARAM_CLIENT_ID)
-	}
 	if len(clientId) == 0 {
 		return o.RenderJson(m.Err_Invalid_Client)
 	}
@@ -92,4 +93,26 @@ func (o OAuth) Authorize() revel.Result {
 		"code":  code,
 	})
 	return o.Redirect(redirectUrl)
+}
+
+func (o OAuth) AccessToken() revel.Result {
+	appKey, appSecret := o.GetClientInfo()
+	if len(appKey) == 0 || len(appSecret) == 0 {
+		return o.RenderJson(m.Err_Invalid_Client)
+	}
+	app := m.ToApp(o.Txn.Select(m.App{}, appByKeySql, appKey))
+	if app == nil {
+		return o.RenderJson(m.Err_Invalid_Client)
+	}
+    grantType := o.Params.Get("grant_type")
+    if len(grantType) == 0 || grantType != "authorization_code" {
+    	return o.RenderJson(m.Err_unsupported_grant_type)
+    }
+
+    code := o.Params.Get("code")
+    appSession := o.getAppSessionIfPresent(app.Id)
+    if len(code) == 0 || code != appSession.AppAuthCode {
+    	return o.RenderJson(m.Err_Invalid_Request)
+    }
+	return nil
 }

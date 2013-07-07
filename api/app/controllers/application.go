@@ -40,9 +40,15 @@ type Application struct {
 	*GorpController
 }
 
-func (c Application) GetClientInfo() (string, string) {
-	appKey := c.Request.Header.Get(m.PARAM_CLIENT_ID)
-	appSecret := c.Request.Header.Get(m.PARAM_CLIENT_SECRET)
+func (c Application) GetClientInfo() (appKey string, appSecret string) {
+	appKey = c.Request.Header.Get(m.PARAM_CLIENT_ID)
+	appSecret = c.Request.Header.Get(m.PARAM_CLIENT_SECRET)
+	if len(appKey) == 0 {
+		appKey = c.Params.Get(m.PARAM_CLIENT_ID)
+	}
+	if len(appSecret) == 0 {
+		appSecret = c.Params.Get(m.PARAM_CLIENT_SECRET)
+	}
 	return appKey, appSecret
 }
 

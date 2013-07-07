@@ -221,6 +221,9 @@ func (r *Resource) PreInsert(_ gorp.SqlExecutor) error {
 	if r.Parent != nil {
 		r.ParentId = r.Parent.Id
 	}
+	if r.TopId <= 0 {
+		r.TopId = r.ParentId
+	}
 	r.CreatedTime = mysql.NullTime{timeNow, true}
 	r.LastModifiedTime = mysql.NullTime{timeNow, true}
 	return nil

@@ -19,16 +19,19 @@
 
 (function($) {
 
-var jForm, jAlert, jChkMenu,
+var jForm, jAlert, jResName, jChkMenu, jResDescValid, jResDesc,
     jParent, jParentH, jSubmit, _timer,
     DISABLED = 'disabled';
 
 function initElements() {
 	jForm = $('#form_edit_res');
 	jAlert = $('#alert');
+	jResName = $('#txt_res_name');
 	jChkMenu = $('#chk_is_menu');
 	jParent = $('#cmb_res_parent');
 	jParentH = $('#help_res_parent');
+	jResDescValid = $('#txt_desc_valid');
+	jResDesc = $('#txt_res_desc');
 	jSubmit = $('#btn_save_res');
 }
 
@@ -43,6 +46,10 @@ function attachEvents() {
 		} else {
 			$('#txt_is_menu').val('false');
 		}
+	});
+	jSubmit.click(function() {
+        var resDesc = $.trim(jResDesc.val());
+        jResDescValid.val(resDesc.length > 0 ? 'true' : 'false');
 	});
 }
 

@@ -1,32 +1,41 @@
 {{template "header.html" .}}{{template "flash.html" .}}
 <ul class="breadcrumb">
   <li><a href="{{url "Application.Index"}}">首页</a> <span class="divider">/</span></li>
-  <li>系统权限管理 <span class="divider">/</span></li>
+  <li>应用管理 <span class="divider">/</span></li>
   <li class="active">{{.title}}</li>
 </ul>
 
-<div class="container">
-  <h4>权限资源列表</h4>
+<div>
+  <h4>{{.title}}</h4>
+  {{if eq (len .pageApp.Content) 0}}
+  <div class="hero-unit">
+    <h1>还没有任何应用信息！</h1>
+    <p>点击创建应用按钮创建应用，如果操作者对填写信息不明确，请通知相关人员！</p>
+    <p>
+      <a href="#" class="btn btn-primary btn-large">马上创建应用</a>
+    </p>
+  </div>
+  {{else}}
   <table class="table table-hover">
   <tr>
   	<th>#</th>
-  	<th>名称</th>
-  	<th>Code</th>
-  	<th>URL</th>
-  	<th>属于菜单</th>
-    <th>创建者</th>
+  	<th>应用名称</th>
+  	<th>应用网址</th>
+  	<th>简介</th>
+  	<th>是否绑定域名</th>
+  	<th>所属用户</th>
   	<th>创建时间</th>
   	<th>最后修改</th>
   	<th>操作</th>
   </tr>
-  <tbody>{{range .pageResource.Content}}
-  <tr>
+  <tbody>{{range .pageApp.Content}}
+  <tr{{if not .IsEnabled}} class="muted"{{end}}>
   	<td>{{.Id}}</td>
   	<td>{{.Name}}</td>
-  	<td>{{.Code}}</td>
   	<td>{{.Url}}</td>
-  	<td>{{if .IsMenu}}是{{else}}否{{end}}</td>
-  	<td>{{if gt .CreatedById 0}}<a href="#">{{.CreatedByName.String}}</a>{{else}}(系统){{end}}</td>
+  	<td>{{.Summary}}</td>
+  	<td>{{if .IsBindDomain}}<span class="badge badge-info">已绑定</span>{{else}}<span class="badge">未绑定</span>{{end}}</td>
+  	<td><a href="#" data-user-id="{{.UserId}}">{{.UserName}}</a></td>
   	<td><span title="{{.CreatedTime.Time.Format "2006-01-02 15:04"}}">{{.CreatedTime.Time.Format "2006-01-02"}}</span></td>
   	<td><span title="{{.LastModifiedTime.Time.Format "2006-01-02 15:04"}}">{{.LastModifiedTime.Time.Format "2006-01-02"}}</span></td>
   	<td>
@@ -34,7 +43,7 @@
         <a href="#" class="btn btn-small btn-primary dropdown-taggle" data-toggle="dropdown">操 作
           <span class="caret"></span></a>
         <ul class="dropdown-menu">
-          <li><a href="{{url "Privileges.ResourceEdit" .Id}}"><i class="icon-edit"></i> 编辑</a></li>
+          <li><a href="#"><i class="icon-edit"></i> 编辑</a></li>
           <li class="divider"></li>
           <li><a href="javascript:void(0)" onclick="return false;"><i class="icon-remove"></i> 删除</a></li>
         </ul>
@@ -42,8 +51,8 @@
     </td>
   </tr>{{end}}
   </tbody>
-  </table>
-  {{set . "pagination" .pageResource}} {{set . "paginationAlign" "centered"}} {{set . "pageUrl" "/privilege/res_list/%d"}}
+  </table>{{end}} {{/*-- end if --*/}}
+  {{set . "pagination" .pageApp}} {{set . "paginationAlign" "centered"}} {{set . "pageUrl" "/app/list/%d"}}
   {{template "pagination.html" .}}
 </div>
 
