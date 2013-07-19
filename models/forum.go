@@ -22,12 +22,13 @@ import (
 	"github.com/coopernurse/gorp"
 	"github.com/go-sql-driver/mysql"
 	"github.com/robfig/revel"
+	"reflect"
 	"time"
 )
 
 // Forum model
 type Forum struct {
-	Id               uint           `db:"id"`
+	Id               uint16         `db:"id"`
 	IdAlias          string         `db:"id_alias"`
 	Title            string         `db:"title"`
 	Summary          string         `db:"summary"`
@@ -88,35 +89,78 @@ func NewForum(idAlias, title, summary string) *Forum {
 	return forum
 }
 
+type FieldType struct {
+	Id   uint16
+	Name string
+	Kind reflect.Kind
+}
+
+var (
+	FieldTypes = map[uint16]*FieldType{
+		uint16(1):  &FieldType{uint16(1), "字符串", reflect.String},
+		uint16(2):  &FieldType{uint16(2), "布尔值", reflect.Bool},
+		uint16(3):  &FieldType{uint16(3), "整型值", reflect.Int},
+		uint16(4):  &FieldType{uint16(4), "Byte", reflect.Int8},
+		uint16(5):  &FieldType{uint16(5), "短整型值(short)", reflect.Int16},
+		uint16(6):  &FieldType{uint16(6), "整型值(32位)", reflect.Int32},
+		uint16(7):  &FieldType{uint16(7), "整型值(64位)", reflect.Int64},
+		uint16(8):  &FieldType{uint16(8), "整型值(无符号)", reflect.Uint},
+		uint16(9):  &FieldType{uint16(9), "Byte(无符号)", reflect.Uint8},
+		uint16(10): &FieldType{uint16(10), "短整型值(short无符号)", reflect.Uint16},
+		uint16(11): &FieldType{uint16(11), "整型值(32位无符号)", reflect.Uint32},
+		uint16(12): &FieldType{uint16(12), "整型值(64位无符号)", reflect.Uint64},
+		uint16(13): &FieldType{uint16(13), "浮点型(32位)", reflect.Float32},
+		uint16(14): &FieldType{uint16(14), "浮点型(64位)", reflect.Float64},
+		uint16(15): &FieldType{uint16(15), "数组(Array)", reflect.Array},
+		uint16(16): &FieldType{uint16(16), "HashMap", reflect.Map},
+		uint16(17): &FieldType{uint16(17), "切片(Slice)", reflect.Slice},
+		uint16(18): &FieldType{uint16(18), "结构(Struct)", reflect.Struct},
+	}
+)
+
 // Forum's Field model
 type ForumField struct {
 	Id          uint           `db:"id"`
-	ForumId     uint           `db:"forum_id"`
+	ForumId     uint16         `db:"forum_id"`
 	Name        string         `db:"field_name"`
 	Summary     sql.NullString `db:"summary"`
 	Rule        sql.NullString `db:"field_rule"`
-	FieldTypeId int16          `db:"field_type"`
+	FieldTypeId uint16         `db:"field_type"`
 	SortOrder   uint16         `db:"sort_order"`
 	Required    bool           `db:"required"`
 	Options     int            `db:"options"`
+
+	FieldType *FieldType `db:"-"`
+}
+
+func (f *ForumField) PostGet(_ gorp.SqlExecutor) error {
+	if f.FieldTypeId > 0 {
+		if fieldType, ok := FieldTypes[f.FieldTypeId]; ok {
+			f.FieldType = fieldType
+		}
+	}
+	return nil
 }
 
 // Forum's Field value model
 type ForumFieldValue struct {
 	Id        uint           `db:"id"`
-	FieldId   uint           `db:"field_id"`  // ForumField.Id
-	ParentId  uint           `db:"parent_id"` // >> FieldId
+	FieldId   uint           `db:"field_id"` // ForumField.Id
+	ParentId  uint           `db:"parent_id"`
 	Name      string         `db:"field_name"`
 	Value     sql.NullString `db:"field_value"`
 	SortOrder uint16         `db:"sort_order"`
 	IsDefault bool           `db:"is_default"`
+
+	Parent    *ForumFieldValue   `db:"-"`
+	SubValues []*ForumFieldValue `db:"-"`
 }
 
 type Thread struct {
 	Id               uint64         `db:"id"`
 	IdAlias          string         `db:"id_alias"`
 	UserId           uint64         `db:"user_id"`
-	ForumId          uint           `db:"forum_id"`
+	ForumId          uint16         `db:"forum_id"`
 	TypeId           int16          `db:"type_id"`
 	Title            string         `db:"title"`
 	Content          string         `db:"content"`
@@ -127,13 +171,35 @@ type Thread struct {
 	LastPostId       uint64         `db:"last_post_id"`
 	LastPostUserId   uint64         `db:"last_post_user_id"`
 	LastPostTime     mysql.NullTime `db:"last_post_time"`
-	AsTop            bool           `db:"as_top"`
-	AsGood           bool           `db:"as_good"`
-	ClientIp         sql.NullString `db:"client_ip"`
+	IsTop            bool           `db:"is_top"`
+	IsGood           bool           `db:"is_good"`
+	ClientIp         string         `db:"client_ip"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 	Options          int            `db:"options"`
 	Status           int16          `db:"status"`
+}
+
+// Top this thread
+func (t *Thread) AsTop() *Thread {
+	t.IsTop = true
+	t.LastModifiedTime = mysql.NullTime{time.Now(), true}
+	return t
+}
+
+// Set this thread as good
+func (t *Thread) AsGood() *Thread {
+	t.IsGood = true
+	t.LastModifiedTime = mysql.NullTime{time.Now(), true}
+	return t
+}
+
+func (t *Thread) LastPost(posts *Posts) *Thread {
+	t.LastPostId = posts.Id
+	t.LastPostUserId = posts.UserId
+	t.LastPostTime = posts.CreatedTime
+	t.LastModifiedTime = mysql.NullTime{time.Now(), true}
+	return t
 }
 
 type Posts struct {
@@ -152,11 +218,11 @@ type Posts struct {
 }
 
 type PostsReply struct {
-	Id uint64 `db:"id"`
-	PostsId uint64 `db:"posts_id"`
-	UserId uint64 `db:"user_id"`
-	UserName string `db:"user_name"`
-	UserEmail   sql.NullString `db:"user_email"` // redundant field
-	UserUrl     sql.NullString `db:"user_url"`   // redundant field
-	
+	Id        uint64         `db:"id"`
+	PostsId   uint64         `db:"posts_id"`
+	UserId    uint64         `db:"user_id"`
+	UserName  string         `db:"user_name"`
+	UserEmail sql.NullString `db:"user_email"` // redundant field
+	UserUrl   sql.NullString `db:"user_url"`   // redundant field
+
 }

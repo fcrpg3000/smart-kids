@@ -30,6 +30,9 @@ admin.errorEdit=保存管理员信息失败，原因：%s！
 admin.errorName=错误的管理员用户名格式！
 admin.errorExistName=管理员用户名已存在！
 admin.nameNotFound=管理员用户名不存在！
+admin.validation.nameLength=管理员用户名长度必须是 %d - %d 个字符或汉字
+admin.validation.empNameLength=员工名称长度必须是 %d - %d 个字符或汉字
+admin.validation.empNoLength=员工号长度必须是 %d - %d 个字符
 
 ResourceEdit.title.creation=添加新的权限资源
 ResourceEdit.title.edit=%s 的详细信息
@@ -37,4 +40,5 @@ resource.title.list=权限资源列表
 resource.errorEdit=保存权限资源信息失败，原因：%s！
 resource.successEdit=权限资源信息（%s）保存成功！
 
-AppList.title.list=应用列表
+App.title.list=应用列表
+App.title.detail=应用详细信息

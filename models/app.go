@@ -49,11 +49,11 @@ const (
 
 // Developer's typeId and ImType enumeration
 const (
-	DT_PERSONAL  = int16(1) // 个人
-	DT_COMPANY   = int16(2) // 公司
-	DIT_GTALK    = int16(1) // GTalk
-	DIT_QQ       = int16(2) // 腾讯QQ
-	DIT_WANGWANG = int16(3) // 淘宝旺旺
+	DT_PERSONAL  = uint16(1) // 个人
+	DT_COMPANY   = uint16(2) // 公司
+	DIT_GTALK    = uint16(1) // GTalk
+	DIT_QQ       = uint16(2) // 腾讯QQ
+	DIT_WANGWANG = uint16(3) // 淘宝旺旺
 )
 
 // public var fields of Developer.
@@ -67,15 +67,15 @@ var (
 
 // Smart Kids developer
 type Developer struct {
-	UserId           int64          `db:"user_id" json:"uid"`
+	UserId           uint64         `db:"user_id" json:"uid"`
 	UserName         string         `db:"user_name" json:"userName"`
-	DevType          int16          `db:"dev_type"`
+	DevType          uint16         `db:"dev_type"`
 	DevName          string         `db:"dev_name"`
 	ProvinceId       int            `db:"province_id"`
 	CityId           int            `db:"city_id"`
 	Email            string         `db:"email"`
 	Phone            string         `db:"phone"`
-	DevImType        int16          `db:"dev_im_type"`
+	DevImType        uint16         `db:"dev_im_type"`
 	DevIm            string         `db:"dev_im"`
 	DevSite          string         `db:"dev_site"`
 	IsTrusted        bool           `db:"is_trusted"`
@@ -141,7 +141,7 @@ var (
 )
 
 type App struct {
-	Id               int64          `db:"app_id"`
+	Id               uint           `db:"app_id"`
 	Name             string         `db:"app_name"` // Unique Index
 	CateId           int            `db:"cate_id"`
 	BaseOsId         int            `db:"base_app_os"`
@@ -153,7 +153,7 @@ type App struct {
 	TagId1           int            `db:"tag_id1"`
 	TagId2           int            `db:"tag_id2"`
 	TagId3           int            `db:"tag_id3"`
-	UserId           int64          `db:"user_id"`
+	UserId           uint64         `db:"user_id"`
 	UserName         string         `db:"user_name"`
 	AppKey           string         `db:"app_key"`    // Unique Index
 	AppSecret        string         `db:"app_secret"` // Unique Index
@@ -198,13 +198,13 @@ var (
 )
 
 type AppSession struct {
-	AppId            int64          `db:"app_id"`
+	AppId            uint           `db:"app_id"`
 	AppName          string         `db:"app_name"`
 	AppAuthCode      string         `db:"app_auth_code"` // Dynamic change
 	AccessToken      string         `db:"access_token"`  // Unique Index
 	AppKey           string         `db:"app_key"`
 	AppSecret        string         `db:"app_secret"`
-	LastAccessTime   int64          `db:"last_access_time"`
+	LastAccessTime   uint64         `db:"last_access_time"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 }
@@ -226,7 +226,7 @@ func NewAppSession(app *App) *AppSession {
 	timeNow := time.Now()
 	session := &AppSession{
 		AppId: app.Id, AppName: app.Name, AppKey: app.AppKey,
-		AppSecret: app.AppSecret, LastAccessTime: timeNow.Unix(),
+		AppSecret: app.AppSecret, LastAccessTime: uint64(timeNow.Unix()),
 		CreatedTime:      mysql.NullTime{timeNow, true},
 		LastModifiedTime: mysql.NullTime{timeNow, true},
 	}

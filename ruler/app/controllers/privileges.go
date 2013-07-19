@@ -90,11 +90,10 @@ func (p Privileges) updateResource(res *m.Resource) (int64, error) {
 	existsRes.Desc = res.Desc
 	existsRes.ParentId = res.ParentId
 	existsRes.IsMenu = res.IsMenu
-	fmt.Println("Updated resource: ", res)
 	return p.Txn.Update(existsRes)
 }
 
-func (p Privileges) loadResource(id int) *m.Resource {
+func (p Privileges) loadResource(id uint) *m.Resource {
 	return m.ToResource(p.Txn.Get(m.Resource{}, id))
 }
 
@@ -114,7 +113,7 @@ func (c Privileges) ResourceList(p, ps int) revel.Result {
 }
 
 // Resource edit page
-func (p Privileges) ResourceEdit(id int) revel.Result {
+func (p Privileges) ResourceEdit(id uint) revel.Result {
 	topResources := p.findTopResources()
 	title := p.Message("ResourceEdit.title.creation")
 	if id <= 0 {

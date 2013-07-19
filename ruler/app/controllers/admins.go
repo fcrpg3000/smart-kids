@@ -17,13 +17,22 @@
 package controllers
 
 import (
+	"crypto/sha1"
+	"database/sql"
+	"encoding/hex"
 	_ "encoding/json"
-	_ "fmt"
+	"fmt"
 	"github.com/robfig/revel"
 	"log"
+	"math/rand"
 	m "smart-kids/ruler/app/models"
 	_ "smart-kids/ruler/app/routes"
 	"smart-kids/util"
+	"time"
+)
+
+var (
+	random = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 type Administrators struct {
@@ -31,8 +40,19 @@ type Administrators struct {
 }
 
 // Returns admin of the specified id.
-func (a Administrators) findAdmin(id int) *m.Admin {
+func (a Administrators) findAdmin(id uint) *m.Admin {
 	return m.ToAdmin(a.Txn.Get(m.Admin{}, id))
+}
+
+func (a Administrators) findAdminByName(name string) (*m.Admin, bool) {
+	if len(name) == 0 {
+		return nil, false
+	}
+	admins := m.ToAdmins(a.Txn.Select(m.Admin{}, m.QUERY_ADMIN_BY_NAME, name))
+	if len(admins) == 0 {
+		return nil, false
+	}
+	return admins[0], true
 }
 
 // Returns page admin of the pageable.
@@ -67,6 +87,54 @@ func (a Administrators) findRoles() []*m.Role {
 	return m.ToRoles(a.Txn.Select(m.Role{}, m.BASE_QUERY_ROLE))
 }
 
+func (a Administrators) validationAdmin(admin m.Admin) {
+	nameLength := a.Message("admin.validation.nameLength", 4, 16)
+	a.Validation.Range(len(admin.AdminName), 4, 16).
+		Key("admin.AdminName").Message(nameLength)
+	if admin.EmpName.Valid {
+		empNameLength := a.Message("admin.validation.empNameLength", 2, 10)
+		a.Validation.Range(len(admin.EmpName.String), 2, 10).
+			Key("admin.EmpName.String").Message(empNameLength)
+	}
+	if admin.EmpNo.Valid {
+		empNoLength := a.Message("admin.validation.empNoLength", 2, 16)
+		a.Validation.Range(len(admin.EmpNo.String), 2, 16).
+			Key("admin.EmpNo.String").Message(empNoLength)
+	}
+}
+
+func (a Administrators) addNewAdmin(admin m.Admin) revel.Result {
+	if _, found := a.findAdminByName(admin.AdminName); found {
+		return a.RenderJson(util.FailureResult(a.Message("admin.errorExistName")))
+	}
+	admin.EmpName.Scan(admin.EmpNameValue)
+	admin.EmpNo.Scan(admin.EmpNoValue)
+	a.validationAdmin(admin)
+	if a.Validation.HasErrors() {
+		result := util.FailureResult("保存失败")
+		for k, v := range a.Validation.ErrorMap() {
+			result.AddValue(k, v.Message)
+		}
+		return a.RenderJson(result)
+	}
+	sha1Hash := sha1.New()
+	salt := fmt.Sprintf("%v", random.Intn(90000000)+10000000)
+	sha1Hash.Write([]byte(fmt.Sprintf("123456{%s}", salt)))
+	admin.Salt = salt
+	fmt.Println(salt, " ", admin.Salt)
+	admin.HashPassword = hex.EncodeToString(sha1Hash.Sum(nil))
+	if currentAdmin := a.connected(); currentAdmin != nil {
+		admin.CreatedById = currentAdmin.Id
+		admin.CreatedByName = sql.NullString{currentAdmin.AdminName, true}
+	}
+	fmt.Println(admin)
+	err := a.Txn.Insert(&admin)
+	if err != nil {
+		return a.RenderJson(util.ErrorResult(a.Message("admin.errorEdit", err.Error())))
+	}
+	return a.RenderJson(util.SuccessResult(a.Message("admin.successEdit", admin.AdminName)))
+}
+
 // Pagination admin
 func (a Administrators) AdminList(p int) revel.Result {
 	pageable, err := util.NewPageable(p, DEFAULT_PAGE_SIZE, util.ASC, []string{m.F_ADMIN_NAME})
@@ -84,17 +152,17 @@ func (a Administrators) changeAdminEnabled(admin *m.Admin, isEnabled bool) (int6
 }
 
 // Disable admin of the specified id.
-func (a Administrators) DisableAdmin(id int) revel.Result {
+func (a Administrators) DisableAdmin(id uint) revel.Result {
 	return a.updateAdminEnabled(id, false)
 }
 
 // Enable admin of the specified id.
-func (a Administrators) EnableAdmin(id int) revel.Result {
+func (a Administrators) EnableAdmin(id uint) revel.Result {
 	return a.updateAdminEnabled(id, true)
 }
 
 // Update admin's enabled property
-func (a Administrators) updateAdminEnabled(id int, isEnabled bool) revel.Result {
+func (a Administrators) updateAdminEnabled(id uint, isEnabled bool) revel.Result {
 	targetAdmin := a.findAdmin(id)
 	if targetAdmin == nil {
 		return a.RenderJson(util.FailureResult(a.Message("admin.notFound")))
@@ -110,9 +178,9 @@ func (a Administrators) updateAdminEnabled(id int, isEnabled bool) revel.Result 
 	return a.RenderJson(util.SuccessResult(a.Message("operation.successFul")))
 }
 
-func (a Administrators) AdminDetail(id int) revel.Result {
+func (a Administrators) AdminDetail(id uint) revel.Result {
 	var admin *m.Admin
-	var roles = make([]*m.Role, 0)
+	var roles []*m.Role
 	allRoles := a.findRoles()
 	if id <= 0 {
 		roles = allRoles
@@ -151,7 +219,7 @@ func (a Administrators) SaveAdmin(admin m.Admin) revel.Result {
 		message string
 	)
 	if admin.Id <= 0 { // Insert
-		err = a.Txn.Insert(&admin)
+		return a.addNewAdmin(admin)
 	} else { // Update
 		_, err = a.Txn.Update(&admin)
 	}
@@ -169,8 +237,8 @@ func (a Administrators) CheckAdminName(adminName string) revel.Result {
 	if len(adminName) == 0 {
 		return a.RenderJson(util.ErrorResult(a.Message("admin.errorName")))
 	}
-	admin := a.getAdmin(adminName)
-	if admin == nil {
+	_, found := a.findAdminByName(adminName)
+	if !found {
 		return a.RenderJson(util.SuccessResult(a.Message("admin.nameNotFound")))
 	}
 	return a.RenderJson(util.FailureResult(a.Message("admin.errorExistName")))

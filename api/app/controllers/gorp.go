@@ -49,11 +49,14 @@ func initUsers() {
 	// Register User model
 	t := Dbm.AddTableWithName(models.User{}, models.USER_TABLE).SetKeys(true, "UserId")
 	setColumnSizes(t, map[string]int{
-		"UserName":      50,
-		"HashPassword":  100,
-		"PasswordSalt":  100,
-		"Email":         50,
-		"CommonlyEmail": 50,
+		"Email":          50,
+		"UserName":       50,
+		"HashPassword":   100,
+		"PasswordSalt":   100,
+		"AvatarUri":      200,
+		"SmallAvatarUri": 200,
+		"ThumbAvatarUri": 200,
+		"SpareEmail":     50,
 	})
 	t.ColMap("UserName").SetUnique(true)
 
@@ -68,18 +71,6 @@ func initUsers() {
 		"Nickname":       50,
 		"DateOfBirthStr": 10,
 		"OtherState":     100,
-	})
-
-	// Register UserAvatar model
-	t = Dbm.AddTableWithName(models.UserAvatar{}, models.USER_AVATAR_TABLE).SetKeys(false, "Id")
-	setColumnSizes(t, map[string]int{
-		"UserName":        50,
-		"ImageDomain":     100,
-		"AvatarPath":      255,
-		"SrcAvatarPath":   255,
-		"SmallAvatarPath": 255,
-		"ThumbAvatarPath": 255,
-		"AvatarName":      250,
 	})
 
 	// Register BannedUser model
@@ -128,6 +119,26 @@ func initApp() {
 		"AppSecret":   100,
 	})
 	t.ColMap("AccessToken").SetUnique(true)
+}
+
+func initForum() {
+	t := Dbm.AddTableWithName(models.Forum{}, models.FORUM_TABLE).SetKeys(true, "id")
+	setColumnSizes(t, map[string]int{
+		"IdAlias": 50,
+		"Title":   50,
+		"Summary": 500,
+	})
+	t.ColMap("IdAlias").SetUnique(true)
+
+	t = Dbm.AddTableWithName(models.Thread{}, models.FORUM_THREAD_TABLE).SetKeys(true, "id")
+	setColumnSizes(t, map[string]int{
+		"IdAlias":   50,
+		"Title":     50,
+		"Tags":      50,
+		"SourceUrl": 255,
+		"ClientIp":  20,
+	})
+	t.ColMap("IdAlias").SetUnique(true)
 }
 
 type GorpController struct {

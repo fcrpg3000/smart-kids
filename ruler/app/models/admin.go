@@ -41,15 +41,15 @@ const (
 )
 
 type Admin struct {
-	Id               int            `db:"admin_id"`
+	Id               uint           `db:"admin_id"`
 	AdminName        string         `db:"admin_name"`
-	HashPassword     string         `db:"hash_password" json:"-"`
-	Salt             string         `db:"pwd_salt" json:"-"`
-	UserId           int64          `db:"user_id"`   // relate to User#Id if necessary
+	HashPassword     string         `db:"hash_password"`
+	Salt             string         `db:"pwd_salt"`
+	UserId           uint64         `db:"user_id"`   // relate to User#Id if necessary
 	UserName         sql.NullString `db:"user_name"` // relate to User#UserName if necessary
 	EmpName          sql.NullString `db:"emp_name"`
 	EmpNo            sql.NullString `db:"emp_no"`
-	CreatedById      int            `db:"created_by_id"`
+	CreatedById      uint           `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
@@ -57,8 +57,26 @@ type Admin struct {
 	LastIp           sql.NullString `db:"last_ip"`
 
 	// Transient
-	Password string  `db:"-" json:"-"` // used in form
-	Roles    []*Role `db:"-" json:",omitempty"`
+	EmpNameValue string  `db:"-"`
+	EmpNoValue   string  `db:"-"`
+	Password     string  `db:"-" json:"-"` // used in form
+	Roles        []*Role `db:"-" json:",omitempty"`
+}
+
+func (a *Admin) PreInsert(_ gorp.SqlExecutor) error {
+	timeNow := time.Now()
+	a.CreatedTime = mysql.NullTime{timeNow, true}
+	a.LastModifiedTime = mysql.NullTime{timeNow, true}
+	return nil
+}
+
+func (a *Admin) String() string {
+	return fmt.Sprintf("Admin{Id=%d, AdminName=%s, HashPassword=%s, Salt=%s, "+
+		"UserId=%d, UserName=%v, EmpName=%v, EmpNo=%v, CreatedById=%d, "+
+		"CreatedByName=%v, CreatedTime=%v, LastModifiedTime=%v, IsEnabled=%v, "+
+		"LastIp=%v}", a.Id, a.AdminName, a.HashPassword, a.Salt, a.UserId,
+		a.UserName, a.EmpName, a.EmpNo, a.CreatedById, a.CreatedByName,
+		a.CreatedTime, a.LastModifiedTime, a.IsEnabled, a.LastIp)
 }
 
 // gorp 不能自动处理关联关系，实现这个接口方法，当调用根据Id获取 Admin 对象时，
@@ -67,18 +85,7 @@ func (a *Admin) PostGet(exe gorp.SqlExecutor) error {
 	query := BASE_QUERY_ROLE +
 		"WHERE role_id IN (SELECT role_id FROM m_admin_role ar JOIN m_admin a " +
 		"ON a.admin_id = ar.admin_id WHERE a.admin_id = ?)"
-	objs, err := exe.Select(Role{}, query, a.Id)
-	if err != nil {
-		return fmt.Errorf("Error loading admin's(%d) roles : %s", a.Id, err)
-	}
-	if len(objs) > 0 {
-		a.Roles = make([]*Role, len(objs))
-		for i, obj := range objs {
-			if !reflect.ValueOf(obj).IsNil() {
-				a.Roles[i] = obj.(*Role)
-			}
-		}
-	}
+	a.Roles = ToRoles(exe.Select(Role{}, query, a.Id))
 	return nil
 }
 
@@ -117,11 +124,11 @@ const (
 
 // mapped table
 type Role struct {
-	Id               int            `db:"role_id"`
+	Id               uint           `db:"role_id"`
 	Code             string         `db:"role_code"`
 	Name             string         `db:"role_name"`
 	Desc             sql.NullString `db:"role_desc"`
-	CreatedById      int            `db:"created_by_id"`
+	CreatedById      uint           `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
@@ -186,15 +193,15 @@ const (
 )
 
 type Resource struct {
-	Id               int            `db:"res_id"`
+	Id               uint           `db:"res_id"`
 	Name             string         `db:"res_name"`
 	Code             string         `db:"res_code"`
 	Desc             sql.NullString `db:"res_desc"`
 	Url              string         `db:"res_url"`
-	TopId            int            `db:"top_id"`
-	ParentId         int            `db:"parent_id"`
+	TopId            uint           `db:"top_id"`
+	ParentId         uint           `db:"parent_id"`
 	IsMenu           bool           `db:"is_menu"`
-	CreatedById      int            `db:"created_by_id"`
+	CreatedById      uint           `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`

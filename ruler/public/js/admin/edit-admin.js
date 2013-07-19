@@ -100,9 +100,7 @@
         jSubmit.button('reset');
         return false;
       }
-      if (hasError) {
-        showAlert();
-      }
+      jForm.submit();
       return false;
     });
   }

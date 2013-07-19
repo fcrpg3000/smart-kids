@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	sqlMainMenus = fmt.Sprintf("%s WHERE parent_id = -1 and top_id = -1",
+	sqlMainMenus = fmt.Sprintf("%s WHERE parent_id = 0 and top_id = 0",
 		models.BASE_QUERY_RESOURCE)
 	sqlSubMenus = fmt.Sprintf("%s WHERE is_menu = 1 and parent_id > 0 ORDER BY res_url ASC",
 		models.BASE_QUERY_RESOURCE)
@@ -163,7 +163,7 @@ func (c Application) AddMenus() revel.Result {
 	mainMenus := models.ToResources(c.Txn.Select(models.Resource{}, sqlMainMenus))
 	subMenus := models.ToResources(c.Txn.Select(models.Resource{}, sqlSubMenus))
 
-	var idIdxMap = make(map[int]int)
+	var idIdxMap = make(map[uint]int)
 	for i, mainMenu := range mainMenus {
 		idIdxMap[mainMenu.Id] = i
 	}

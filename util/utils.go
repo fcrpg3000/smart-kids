@@ -127,6 +127,7 @@ func comparator(a, b interface{}) (int, error) {
 		a_int = reflect.ValueOf(a).Int()
 		switch b_type {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			b_int = reflect.ValueOf(b).Int()
 			break
 		default:
@@ -144,6 +145,7 @@ func comparator(a, b interface{}) (int, error) {
 		var a_uint, b_uint uint64
 		a_uint = reflect.ValueOf(a).Uint()
 		switch b_type {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			b_uint = reflect.ValueOf(b).Uint()
 			break

@@ -57,6 +57,10 @@ func (a AppController) findPageApp(pageable *util.Pageable) *util.Page {
 	return util.NewPage(content, pageable, total)
 }
 
+func (a AppController) AppDetail() revel.Result {
+	return nil
+}
+
 // App models pagination
 func (a AppController) AppList(p, ps int) revel.Result {
 	if ps <= 1 {
@@ -71,6 +75,6 @@ func (a AppController) AppList(p, ps int) revel.Result {
 		panic(err)
 	}
 	pageApp := a.findPageApp(pageable)
-	title := a.Message("AppList.title.list")
+	title := a.Message("App.title.list")
 	return a.Render(title, pageApp)
 }
