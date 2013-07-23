@@ -1,0 +1,45 @@
+{{template "header.html" .}}
+
+<ul class="breadcrumb">
+  <li><a href="{{url "Application.Index"}}">首页</a> <span class="divider">/</span></li>
+  <li class="active">{{if .title}}{{.title}}{{else}}修改登录密码{{end}}</li>
+</ul>
+<div>
+
+  <form class="form-horizontal" id="form_chpwd" name="formChpwd" action="/admins/passwd" method="post">
+    <div>
+      <div id="message_tip" class="alert alert-error hide"></div>
+      <div class="control-group">
+        <label class="control-label" for="pwd_oldpwd">旧的登录密码：</label>
+        <div class="controls">
+          <input type="password" id="pwd_oldpwd" name="oldpwd" placeholder="旧的登录密码" />
+          <span class="help-inline hide" id="help_oldpwd">请输入旧的登录密码！</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="pwd_newpwd1">新的密码：</label>
+        <div class="controls">
+          <input type="password" id="pwd_newpwd1" name="newpwd1" placeholder="新的密码" />
+          <span class="help-inline hide" id="help_newpwd1">请输入新的密码！</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="pwd_newpwd2">再次输入新密码：</label>
+        <div class="controls">
+          <input type="password" id="pwd_newpwd2" name="newpwd2" placeholder="再次输入新密码" />
+          <span class="help-inline hide" id="help_newpwd2">请再次输入新密码！</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="controls">
+          <button type="submit" id="btn_passwd" class="btn btn-primary"
+              data-saving-text="正在保存...">修改密码</button>
+        </div>
+      </div>
+    </div><!--/.row second-->
+  </form>
+
+</div>
+
+{{append . "moreScripts" "js/admin/passwd.js"}}
+{{template "footer.html" .}}
