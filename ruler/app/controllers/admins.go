@@ -18,29 +18,34 @@ package controllers
 
 import (
 	"crypto/sha1"
-	"database/sql"
 	"encoding/hex"
 	_ "encoding/json"
 	"fmt"
 	"github.com/robfig/revel"
 	"log"
-	"math/rand"
 	m "smart-kids/ruler/app/models"
 	_ "smart-kids/ruler/app/routes"
 	"smart-kids/util"
-	"time"
-)
-
-var (
-	random = rand.New(rand.NewSource(time.Now().UnixNano()))
+	"strings"
+	_ "time"
 )
 
 type Administrators struct {
 	Application
 }
 
+func hashPassword(srcPwd, salt string) (string, string) {
+	if len(salt) == 0 {
+		salt = util.RandomAlphanumeric(8)
+	}
+	sha1Hash := sha1.New()
+	sha1Hash.Write([]byte(fmt.Sprintf("%s{%s}", srcPwd, salt)))
+	hashPwd := hex.EncodeToString(sha1Hash.Sum(nil))
+	return hashPwd, salt
+}
+
 // Returns admin of the specified id.
-func (a Administrators) findAdmin(id uint) *m.Admin {
+func (a Administrators) findAdmin(id uint32) *m.Admin {
 	return m.ToAdmin(a.Txn.Get(m.Admin{}, id))
 }
 
@@ -57,7 +62,6 @@ func (a Administrators) findAdminByName(name string) (*m.Admin, bool) {
 
 // Returns page admin of the pageable.
 func (a Administrators) findAllAdmin(pageable *util.Pageable) *util.Page {
-
 	var (
 		total   int64
 		content []interface{}
@@ -87,52 +91,66 @@ func (a Administrators) findRoles() []*m.Role {
 	return m.ToRoles(a.Txn.Select(m.Role{}, m.BASE_QUERY_ROLE))
 }
 
-func (a Administrators) validationAdmin(admin m.Admin) {
-	nameLength := a.Message("admin.validation.nameLength", 4, 16)
+func (a Administrators) validationAdmin(admin *m.Admin) {
+	nameLength := a.Message("admin.v.nameLength", 4, 16)
 	a.Validation.Range(len(admin.AdminName), 4, 16).
 		Key("admin.AdminName").Message(nameLength)
-	if admin.EmpName.Valid {
-		empNameLength := a.Message("admin.validation.empNameLength", 2, 10)
-		a.Validation.Range(len(admin.EmpName.String), 2, 10).
-			Key("admin.EmpName.String").Message(empNameLength)
+	if len(admin.EmpNameValue) > 0 {
+		empNameLength := a.Message("admin.v.empNameLength", 2, 10)
+		a.Validation.Range(len(admin.EmpNameValue), 2, 10).
+			Key("admin.EmpNameValue").Message(empNameLength)
+		admin.EmpName.Scan(admin.EmpNameValue)
 	}
-	if admin.EmpNo.Valid {
-		empNoLength := a.Message("admin.validation.empNoLength", 2, 16)
-		a.Validation.Range(len(admin.EmpNo.String), 2, 16).
-			Key("admin.EmpNo.String").Message(empNoLength)
+	if len(admin.EmpNoValue) > 0 {
+		empNoLength := a.Message("admin.v.empNoLength", 2, 16)
+		a.Validation.Range(len(admin.EmpNoValue), 2, 16).
+			Key("admin.EmpNoValue").Message(empNoLength)
+		admin.EmpNo.Scan(admin.EmpNoValue)
 	}
 }
 
-func (a Administrators) addNewAdmin(admin m.Admin) revel.Result {
-	if _, found := a.findAdminByName(admin.AdminName); found {
-		return a.RenderJson(util.FailureResult(a.Message("admin.errorExistName")))
+func (a Administrators) SaveAdmin(admin m.Admin) revel.Result {
+	var (
+		updated, exists *m.Admin
+		found           bool
+		err             error
+	)
+	if exists, found = a.findAdminByName(admin.AdminName); found {
+		if admin.Id <= 0 || (admin.Id > 0 && exists.Id != admin.Id) {
+			return a.RenderJson(util.FailureResult(a.Message("admin.errorExistName")))
+		}
 	}
-	admin.EmpName.Scan(admin.EmpNameValue)
-	admin.EmpNo.Scan(admin.EmpNoValue)
-	a.validationAdmin(admin)
+	if admin.Id > 0 { // update admin
+		updated = a.findAdmin(admin.Id)
+		if updated == nil {
+			return a.RenderJson(util.ErrorResult(a.Message("admin.notFound")))
+		}
+	}
+
+	a.validationAdmin(&admin)
 	if a.Validation.HasErrors() {
 		result := util.FailureResult("保存失败")
 		for k, v := range a.Validation.ErrorMap() {
-			result.AddValue(k, v.Message)
+			if v != nil {
+				result.AddValue(k, v.Message)
+			}
 		}
 		return a.RenderJson(result)
 	}
-	sha1Hash := sha1.New()
-	salt := fmt.Sprintf("%v", random.Intn(90000000)+10000000)
-	sha1Hash.Write([]byte(fmt.Sprintf("123456{%s}", salt)))
-	admin.Salt = salt
-	fmt.Println(salt, " ", admin.Salt)
-	admin.HashPassword = hex.EncodeToString(sha1Hash.Sum(nil))
-	if currentAdmin := a.connected(); currentAdmin != nil {
-		admin.CreatedById = currentAdmin.Id
-		admin.CreatedByName = sql.NullString{currentAdmin.AdminName, true}
+	admin.LastIp.Scan(a.clientIp())
+	if admin.Id <= 0 { // create new admin
+		admin.HashPassword, admin.Salt = hashPassword("123456", "")
+		if currentAdmin := a.connected(); currentAdmin != nil {
+			admin.CreatedBy(currentAdmin.Id, currentAdmin.AdminName)
+		}
+		err = a.Txn.Insert(&admin)
+	} else {
+		_, err = a.Txn.Update(updated.UpdateBy(&admin))
 	}
-	fmt.Println(admin)
-	err := a.Txn.Insert(&admin)
 	if err != nil {
 		return a.RenderJson(util.ErrorResult(a.Message("admin.errorEdit", err.Error())))
 	}
-	return a.RenderJson(util.SuccessResult(a.Message("admin.successEdit", admin.AdminName)))
+	return a.RenderJson(util.SuccessResult(a.Message("admin.s.saved", admin.AdminName)))
 }
 
 // Pagination admin
@@ -152,17 +170,17 @@ func (a Administrators) changeAdminEnabled(admin *m.Admin, isEnabled bool) (int6
 }
 
 // Disable admin of the specified id.
-func (a Administrators) DisableAdmin(id uint) revel.Result {
+func (a Administrators) DisableAdmin(id uint32) revel.Result {
 	return a.updateAdminEnabled(id, false)
 }
 
 // Enable admin of the specified id.
-func (a Administrators) EnableAdmin(id uint) revel.Result {
+func (a Administrators) EnableAdmin(id uint32) revel.Result {
 	return a.updateAdminEnabled(id, true)
 }
 
 // Update admin's enabled property
-func (a Administrators) updateAdminEnabled(id uint, isEnabled bool) revel.Result {
+func (a Administrators) updateAdminEnabled(id uint32, isEnabled bool) revel.Result {
 	targetAdmin := a.findAdmin(id)
 	if targetAdmin == nil {
 		return a.RenderJson(util.FailureResult(a.Message("admin.notFound")))
@@ -171,29 +189,30 @@ func (a Administrators) updateAdminEnabled(id uint, isEnabled bool) revel.Result
 	if targetAdmin.AdminName == "admin" {
 		return a.RenderJson(util.ErrorResult(a.Message("admin.cannotUpdateSuper")))
 	}
+	targetAdmin.LastIp.Scan(a.clientIp())
 	_, err := a.changeAdminEnabled(targetAdmin, isEnabled)
 	if err != nil {
 		panic(err)
 	}
-	return a.RenderJson(util.SuccessResult(a.Message("operation.successFul")))
+	return a.RenderJson(util.SuccessResult(a.OperOkMessage()))
 }
 
-func (a Administrators) AdminDetail(id uint) revel.Result {
+func (a Administrators) AdminDetail(id uint32) revel.Result {
 	var admin *m.Admin
 	var roles []*m.Role
 	allRoles := a.findRoles()
 	if id <= 0 {
 		roles = allRoles
-		title := a.Message("AdminDetail.title.creation")
+		title := a.Message("admin.title.creation")
 		return a.Render(title, roles)
 	}
 	admin = a.findAdmin(id)
 	if admin == nil {
 		roles = allRoles
-		title := a.Message("AdminDetail.title.creation")
+		title := a.Message("admin.title.creation")
 		return a.Render(title, roles)
 	}
-	title := a.Message("AdminDetail.title.edit", admin.AdminName,
+	title := a.Message("admin.title.detail", admin.AdminName,
 		admin.EmpName.String, admin.EmpNo.String)
 	adminRoles := admin.Roles
 	if len(adminRoles) == 0 {
@@ -212,30 +231,57 @@ func (a Administrators) AdminDetail(id uint) revel.Result {
 	return a.Render(title, admin, roles)
 }
 
-func (a Administrators) SaveAdmin(admin m.Admin) revel.Result {
-	var (
-		// row     int64
-		err     error
-		message string
-	)
-	if admin.Id <= 0 { // Insert
-		return a.addNewAdmin(admin)
-	} else { // Update
-		_, err = a.Txn.Update(&admin)
-	}
+// To change hash password page.
+func (a Administrators) Chpwd() revel.Result {
+	currentAdmin := a.connected()
+	title := a.Message("admin.title.chpwd")
+	return a.Render(title, currentAdmin)
+}
 
-	if err != nil {
-		message = a.Message("admin.errorEdit", err.Error())
-	} else {
-		message = a.Message("admin.successEdit", admin.AdminName)
+// Returns (nil, true) if validate passed, otherwise (result, false).
+func (a Administrators) validatePasswd(oldpwd, newpwd1, newpwd2 string) (revel.Result, bool) {
+	oldpwdLen, newpwd1Len, newpwd2Len := len(oldpwd), len(newpwd1), len(newpwd2)
+
+	if oldpwdLen == 0 {
+		return a.RenderJson(util.FailureResult(a.Message("admin.v.oldpwdRequired"))), false
 	}
-	return a.RenderJson(util.SuccessResult(message))
+	if newpwd1Len == 0 && newpwd2Len == 0 {
+		return a.RenderJson(util.FailureResult(a.Message("admin.v.newpwdRequired"))), false
+	} else if newpwd1Len != newpwd2Len {
+		return a.RenderJson(util.FailureResult(a.Message("admin.v.newpwdNotEquals"))), false
+	} else if newpwd1Len < 6 && newpwd1Len > 16 {
+		return a.RenderJson(util.FailureResult(a.Message("admin.v.passwordLength", 6, 16))), false
+	}
+	return nil, true
+}
+
+// Post request to modify current login admin's password.
+func (a Administrators) Passwd(oldpwd, newpwd1, newpwd2 string) revel.Result {
+	oldpwd = strings.TrimSpace(oldpwd)
+	newpwd1 = strings.TrimSpace(newpwd1)
+	newpwd2 = strings.TrimSpace(newpwd2)
+	if result, passed := a.validatePasswd(oldpwd, newpwd1, newpwd2); !passed {
+		return result
+	}
+	currentAdmin := a.connected()
+	hashOldpwd, _ := hashPassword(oldpwd, currentAdmin.Salt)
+	if currentAdmin.HashPassword != hashOldpwd {
+		return a.RenderJson(util.ErrorResult(a.Message("admin.v.oldpwdError")))
+	}
+	newHashPassword, newSalt := hashPassword(newpwd1, "")
+	currentAdmin.HashPassword = newHashPassword
+	currentAdmin.Salt = newSalt
+	_, err := a.Txn.Update(currentAdmin)
+	if err != nil {
+		return a.RenderJson(util.ErrorResult(err.Error()))
+	}
+	return a.RenderJson(util.SuccessResult(a.Message("admin.s.modifyPassword")))
 }
 
 // Check if admin name is available.
 func (a Administrators) CheckAdminName(adminName string) revel.Result {
 	if len(adminName) == 0 {
-		return a.RenderJson(util.ErrorResult(a.Message("admin.errorName")))
+		return a.RenderJson(util.ErrorResult(a.Message("admin.v.nameFormat")))
 	}
 	_, found := a.findAdminByName(adminName)
 	if !found {

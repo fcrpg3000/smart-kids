@@ -29,7 +29,7 @@ func init() {
 	revel.InterceptMethod(Application.checkLogin, revel.BEFORE)
 	revel.InterceptMethod(Application.AddMenus, revel.BEFORE)
 	revel.InterceptMethod((*GorpController).Commit, revel.AFTER)
-	revel.InterceptMethod((*GorpController).Rollback, revel.FINALLY)
+	revel.InterceptMethod((*GorpController).Rollback, revel.PANIC)
 
 	revel.TemplateFuncs["gt"] = util.GreaterThan
 	revel.TemplateFuncs["ge"] = util.GreaterThanOrEqual

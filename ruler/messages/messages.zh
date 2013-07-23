@@ -18,27 +18,40 @@
 operation.successFul=操作已成功！
 resource.notFound=%s 不存在，或已被管理员删除！
 
-AdminDetail.title.creation=创建新的管理员
-AdminDetail.title.edit=%s(%s,%s) 管理员的详细信息
 
+admin.title.chpwd=修改密码
+admin.title.creation=创建新的管理员
+admin.title.detail=%s(%s,%s) 管理员的详细信息
+
+# admin module message
 admin.notFound=指定的管理员不存在，或已被系统管理员删除！
 admin.cannotBanSuper=不能禁止系统内置的超级管理员！
 admin.cannotUpdateSuper=系统内置的超级管理员只能修改员工名称和工号！
-admin.successBanned=已成功禁止指定的管理员！
-admin.successEdit=管理员（%s）信息保存成功！
 admin.errorEdit=保存管理员信息失败，原因：%s！
-admin.errorName=错误的管理员用户名格式！
 admin.errorExistName=管理员用户名已存在！
 admin.nameNotFound=管理员用户名不存在！
-admin.validation.nameLength=管理员用户名长度必须是 %d - %d 个字符或汉字
-admin.validation.empNameLength=员工名称长度必须是 %d - %d 个字符或汉字
-admin.validation.empNoLength=员工号长度必须是 %d - %d 个字符
 
-ResourceEdit.title.creation=添加新的权限资源
-ResourceEdit.title.edit=%s 的详细信息
+# admin module validation message
+admin.v.oldpwdRequired=请输入旧的登录密码
+admin.v.newpwdRequired=请输入新的登录密码
+admin.v.newpwdNotEquals=两次输入的新密码不相同
+admin.v.passwordLength=密码长度必须是 %d ~ %d 个字符
+admin.v.oldpwdError=旧的登录密码错误
+admin.v.nameFormat=错误的管理员用户名格式！
+admin.v.nameLength=管理员用户名长度必须是 %d - %d 个字符或汉字
+admin.v.empNameLength=员工名称长度必须是 %d - %d 个字符或汉字
+admin.v.empNoLength=员工号长度必须是 %d - %d 个字符
+
+# admin module success message
+admin.s.modifyPassword=登录密码修改成功！
+admin.s.saved=管理员（%s）信息保存成功！
+admin.s.banned=管理员 (%s) 已被禁止登录！
+
+resource.title.creation=添加新的权限资源
+resource.title.edit=%s 的详细信息
 resource.title.list=权限资源列表
-resource.errorEdit=保存权限资源信息失败，原因：%s！
-resource.successEdit=权限资源信息（%s）保存成功！
+resource.error.saved=保存权限资源信息失败，原因：%s！
+resource.success.saved=权限资源信息（%s）保存成功！
 
 App.title.list=应用列表
 App.title.detail=应用详细信息

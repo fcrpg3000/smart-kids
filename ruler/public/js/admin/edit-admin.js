@@ -20,7 +20,7 @@
 (function($) {
   var jAddRole, jRemoveRole, jAllRoles, jRoles, jForm, jAid,
       jAdminName, jEmpName, jEmpNo, jAdminNameC, jEmpNameC, jEmpNoC, 
-      jAlert, jSubmit, isModify = 0, checkedName = {}, errorName = {},
+      jAlert, jSubmit, jModal, isModify = 0, checkedName = {}, errorName = {},
       DISABLED = 'disabled', SELECTED = 'selected', CTRL_GROUP = 'div.control-group',
       SELECTED_OPTION = 'option:selected';
 
@@ -40,6 +40,7 @@
     jAllRoles = $('#cmb_all_roles');
     jRoles = $('#cmb_roles');
     jSubmit = $('#btn_save_admin').addClass(DISABLED).attr(DISABLED, true);
+    jModal = $('#confirm_modal');
 
     if (jAid.length && $.trim(jAid.val()) != "") {
       isModify = 1;
@@ -101,6 +102,12 @@
         return false;
       }
       jForm.submit();
+      return false;
+    });
+    $('#btn_goon').click(function() {
+      jForm.resetForm();
+      jModal.modal('hide');
+      location.reload();
       return false;
     });
   }
@@ -202,14 +209,25 @@
     $(this).ajaxSubmit({
       dataType: 'json',
       success: function(data) {
-        alert(data.message);
         if (data.code !== 1) {
           jSubmit.button('reset');
+          var tips = ['<strong>', data.message, '</strong>'];
+          if (data.values) {
+            for (var k in data.values) {
+              tips.push(['<p>', data.values[k], '</p>'].join(''));
+              errorCtrlGroup($('input[name="' + k + '"]').parents(CTRL_GROUP))
+            }
+          }
+          showAlert(tips.join(''));
+        } else {
+          $('div.modal-body', jModal).html('<p>' + data.message + '</p>');
+          jModal.modal('show');
         }
       }
     });
     return false;
   }
+  
   $(function() {
     initElements();
     attachEvents();

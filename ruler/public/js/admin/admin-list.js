@@ -23,8 +23,31 @@
  */
 (function($) {
 
-function changeEnabled(enabled) {
-    
-}
+  function setDisable(btn, id, disabled) {
+    var url = (disabled === true ? '/admins/disable_admin/' : 
+        '/admins/enable_admin/') + id;
+    $.post(url, function(data) {
+      var jBtn = $(btn), jLblEnabled = $('#lbl_enabled_' + id);
+      if (data.code === 1) {
+      	if (disabled) {
+      		$('#tr_' + id).addClass('muted');
+      		jBtn.attr('onclick', 
+      			'return setAdminDisable(this,' + id + ',false);')
+      		.html('<i class="icon-ok-circle"></i> 重新启用');
+      		jLblEnabled.removeClass('badge-info').text('不可用');
+      	} else {
+      		$('#tr_' + id).removeClass('muted');
+      		jBtn.attr('onclick', 
+      			'return setAdminDisable(this,' + id + ',true);')
+      		.html('<i class="icon-ban-circle"></i> 禁用');
+      		jLblEnabled.addClass('badge-info').text('可用');
+      	}
+      }
+      alert(data.message);
+    }, 'json');
+    return false;
+  }
+
+ window.setAdminDisable = setDisable;
 
 })(jQuery);

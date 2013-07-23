@@ -16,6 +16,10 @@
 // limitations under the License.
 package util
 
+import (
+	"reflect"
+)
+
 const (
 	SUCESS_CODE  = 1
 	FAILURE_CODE = 0
@@ -23,9 +27,10 @@ const (
 )
 
 type ResponseResult struct {
-	Code    int                    `json:"code"`
-	Message string                 `json:"message"`
-	Values  map[string]interface{} `json:"values"`
+	Code        int                    `json:"code"`
+	Message     string                 `json:"message"`
+	Values      map[string]interface{} `json:"values,omitempty"`
+	valuesValid bool                   `json:"-"`
 }
 
 func (r *ResponseResult) IsSuccessful() bool {
@@ -41,9 +46,11 @@ func (r *ResponseResult) IsError() bool {
 }
 
 func (r *ResponseResult) AddValue(k string, v interface{}) *ResponseResult {
-	if len(k) == 0 || v == nil {
+	if len(k) == 0 ||
+		(reflect.TypeOf(v).Kind() == reflect.String && len(reflect.ValueOf(v).String()) == 0) {
 		return r
 	}
+	r.initValues()
 	r.Values[k] = v
 	return r
 }
@@ -52,10 +59,19 @@ func (r *ResponseResult) AddValues(added map[string]interface{}) *ResponseResult
 	if len(added) == 0 {
 		return r
 	}
+	r.initValues()
 	for k, v := range added {
 		if v != nil {
 			r.Values[k] = v
 		}
+	}
+	return r
+}
+
+func (r *ResponseResult) initValues() *ResponseResult {
+	if !r.valuesValid {
+		r.Values = make(map[string]interface{})
+		r.valuesValid = true
 	}
 	return r
 }

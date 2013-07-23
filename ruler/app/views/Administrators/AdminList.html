@@ -20,13 +20,13 @@
   	<th>操作</th>
   </tr>
   <tbody>{{range .pageAdmin.Content}}
-  <tr{{if not .IsEnabled}} class="muted"{{end}}>
+  <tr id="tr_{{.Id}}"{{if not .IsEnabled}} class="muted"{{end}}>
   	<td>{{.Id}}</td>
   	<td>{{.AdminName}}</td>
-  	<td>{{if .EmpName.Valid}}{{.EmpName.String}}{{else}}<i>&lt;无&gt;</i>{{end}}</td>
-  	<td>{{if .EmpNo.Valid}}{{.EmpNo.String}}{{else}}<i>&lt;无&gt;</i>{{end}}</td>
-  	<td>{{if gt .UserId 0}}<a href="#">{{.UserName.String}}</a>{{else}}(系统){{end}}</td>
-  	<td>{{if .IsEnabled}}<span class="badge badge-info">可用</span>{{else}}<span class="badge">不可用</span>{{end}}</td>
+  	<td>{{if and .EmpName.Valid (gt (len .EmpName.String) 0)}}{{.EmpName.String}}{{else}}<i>&lt;无&gt;</i>{{end}}</td>
+  	<td>{{if and .EmpNo.Valid (gt (len .EmpNo.String) 0)}}{{.EmpNo.String}}{{else}}<i>&lt;无&gt;</i>{{end}}</td>
+  	<td>{{if gt .CreatedById 0}}<a href="#">{{.CreatedByName.String}}</a>{{else}}(系统){{end}}</td>
+  	<td>{{if .IsEnabled}}<span id="lbl_enabled_{{.Id}}" class="badge badge-info">可用</span>{{else}}<span class="badge">不可用</span>{{end}}</td>
   	<td><span title="{{.CreatedTime.Time.Format "2006-01-02 15:04"}}">{{.CreatedTime.Time.Format "2006-01-02"}}</span></td>
   	<td><span title="{{.LastModifiedTime.Time.Format "2006-01-02 15:04"}}">{{.LastModifiedTime.Time.Format "2006-01-02"}}</span></td>
   	<td>
@@ -35,8 +35,8 @@
           <span class="caret"></span></a>
         <ul class="dropdown-menu">
           <li><a href="{{url "Administrators.AdminDetail" .Id}}"><i class="icon-edit"></i> 编辑</a></li>{{if .IsEnabled}}
-          <li><a href="javascript:void(0)" onclick="return false;"><i class="icon-ban-circle"></i> 禁用</a></li>{{else}}
-          <li><a href="javascript:void(0)" onclick="return false;"><i class="icon-ok-circle"></i> 重新启用</a></li>{{end}}
+          <li><a href="javascript:void(0)" onclick="return setAdminDisable(this,{{.Id}},true);"><i class="icon-ban-circle"></i> 禁用</a></li>{{else}}
+          <li><a href="javascript:void(0)" onclick="return setAdminDisable(this,{{.Id}},false);"><i class="icon-ok-circle"></i> 重新启用</a></li>{{end}}
           <li class="divider"></li>
           <li><a href="javascript:void(0)" onclick="return false;"><i class="icon-remove"></i> 删除</a></li>
         </ul>
@@ -49,4 +49,5 @@
   {{template "pagination.html" .}}
 </div>
 
+{{append . "moreScripts" "js/admin/admin-list.js"}}
 {{template "footer.html" .}}

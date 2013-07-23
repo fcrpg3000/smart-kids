@@ -17,7 +17,6 @@
 package controllers
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/robfig/revel"
@@ -71,7 +70,7 @@ func (p Privileges) addResource(res *m.Resource) error {
 	}
 	admin := p.connected()
 	res.CreatedById = admin.Id
-	res.CreatedByName = sql.NullString{admin.AdminName, true}
+	res.CreatedByName.Scan(admin.AdminName)
 	fmt.Println("New resource: ", res)
 	return p.Txn.Insert(res)
 }
@@ -93,7 +92,7 @@ func (p Privileges) updateResource(res *m.Resource) (int64, error) {
 	return p.Txn.Update(existsRes)
 }
 
-func (p Privileges) loadResource(id uint) *m.Resource {
+func (p Privileges) loadResource(id uint32) *m.Resource {
 	return m.ToResource(p.Txn.Get(m.Resource{}, id))
 }
 
@@ -113,9 +112,9 @@ func (c Privileges) ResourceList(p, ps int) revel.Result {
 }
 
 // Resource edit page
-func (p Privileges) ResourceEdit(id uint) revel.Result {
+func (p Privileges) ResourceEdit(id uint32) revel.Result {
 	topResources := p.findTopResources()
-	title := p.Message("ResourceEdit.title.creation")
+	title := p.Message("resource.title.creation")
 	if id <= 0 {
 		return p.Render(title, topResources)
 	}
@@ -126,7 +125,7 @@ func (p Privileges) ResourceEdit(id uint) revel.Result {
 	if res.ParentId > 0 {
 		res.Parent = p.loadResource(res.ParentId)
 	}
-	title = p.Message("ResourceEdit.title.edit", res.Name)
+	title = p.Message("resource.title.edit", res.Name)
 	return p.Render(title, res, topResources)
 }
 
@@ -146,12 +145,12 @@ func (p Privileges) SaveResource(res m.Resource) revel.Result {
 		err = p.addResource(&res)
 	}
 	if err != nil {
-		result = util.ErrorResult(p.Message("resource.errorEdit", err.Error()))
+		result = util.ErrorResult(p.Message("resource.error.saved", err.Error()))
 	} else {
 		if row <= 0 && update {
 			result = util.FailureResult(p.NotFoundMessage("权限资源信息"))
 		} else {
-			result = util.SuccessResult(p.Message("resource.successEdit", res.Name))
+			result = util.SuccessResult(p.Message("resource.success.saved", res.Name))
 		}
 	}
 	return p.RenderJson(result)

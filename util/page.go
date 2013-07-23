@@ -113,6 +113,9 @@ func (p *Page) initialize() *Page {
 	}
 
 	p.NumberOfElements = len(p.Content)
+	if p.TotalPages < p.Current {
+		p.Current = p.TotalPages
+	}
 	p.HasPrevPage = p.Current > 1
 	p.HasNextPage = p.Current+1 <= p.TotalPages
 	p.IsFirstPage = !p.HasPrevPage

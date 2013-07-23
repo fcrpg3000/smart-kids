@@ -19,6 +19,8 @@ GET     /admins/edit_admin/:id                  Administrators.AdminDetail
 GET     /admins/new_admin                       Administrators.AdminDetail
 POST    /admins/save_admin                      Administrators.SaveAdmin
 GET     /admins/check_admin_name/:adminName     Administrators.CheckAdminName
+GET     /admins/chpwd                           Administrators.Chpwd
+POST    /admins/passwd                          Administrators.Passwd
 
 # Privileges
 GET     /privilege/res_list                     Privileges.ResourceList

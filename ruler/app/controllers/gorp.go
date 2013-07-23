@@ -22,6 +22,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/robfig/revel"
 	"github.com/robfig/revel/modules/db/app"
+	"log"
 	"smart-kids/ruler/app/models"
 )
 
@@ -89,6 +90,7 @@ func (c *GorpController) Begin() revel.Result {
 		panic(err)
 	}
 	c.Txn = txn
+	log.Println("Transaction BEGIN >>>>>>>>>>>")
 	return nil
 }
 
@@ -100,6 +102,7 @@ func (c *GorpController) Commit() revel.Result {
 		panic(err)
 	}
 	c.Txn = nil
+	log.Println("Transaction COMMIT >>>>>>>>>>>")
 	return nil
 }
 
@@ -111,5 +114,6 @@ func (c *GorpController) Rollback() revel.Result {
 		panic(err)
 	}
 	c.Txn = nil
+	log.Println("Transaction ROLLBACK <<<<<<<<<<<")
 	return nil
 }

@@ -92,5 +92,17 @@
 
 </div>
 
+<div class="modal hide fade" id="confirm_modal" data-backdrop="static">
+  <div class="modal-header">
+    <h3>对话框标题</h3>
+  </div>
+  <div class="modal-body">
+  </div>
+  <div class="modal-footer">
+    <a href="javascript:void(0)" id="btn_goon" class="btn btn-success">继续添加</a>
+    <a href="/admins/admin_list" class="btn btn-primary">管理员列表</a>
+  </div>
+</div>
+
 {{append . "moreScripts" "js/admin/edit-admin.js"}}
 {{template "footer.html" .}}

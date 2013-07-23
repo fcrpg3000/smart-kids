@@ -21,10 +21,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/robfig/revel"
-	_ "log"
+	"log"
 	"smart-kids/ruler/app/models"
 	"smart-kids/ruler/app/routes"
 	"smart-kids/util"
+	"strings"
 )
 
 const (
@@ -44,6 +45,10 @@ type Application struct {
 
 func (c Application) NotFoundMessage(entity string) string {
 	return c.Message("resource.notFound", entity)
+}
+
+func (c Application) OperOkMessage() string {
+	return c.Message("operation.successFul")
 }
 
 func (c Application) Index() revel.Result {
@@ -147,6 +152,17 @@ func (c Application) connected() *models.Admin {
 	return nil
 }
 
+func (a Application) clientIp() string {
+	remoteAddrParts := strings.Split(a.Request.RemoteAddr, ":")
+	if revel.Config.BoolDefault("mode.dev", true) {
+		log.Printf("Request RemoteAddr: %s\n", a.Request.RemoteAddr)
+	}
+	if len(remoteAddrParts) > 0 {
+		return remoteAddrParts[0]
+	}
+	return ""
+}
+
 func (c Application) getAdmin(adminName string) *models.Admin {
 	admins := models.ToAdmins(c.Txn.Select(models.Admin{},
 		models.QUERY_ADMIN_BY_NAME, adminName))
@@ -163,7 +179,7 @@ func (c Application) AddMenus() revel.Result {
 	mainMenus := models.ToResources(c.Txn.Select(models.Resource{}, sqlMainMenus))
 	subMenus := models.ToResources(c.Txn.Select(models.Resource{}, sqlSubMenus))
 
-	var idIdxMap = make(map[uint]int)
+	var idIdxMap = make(map[uint32]int)
 	for i, mainMenu := range mainMenus {
 		idIdxMap[mainMenu.Id] = i
 	}

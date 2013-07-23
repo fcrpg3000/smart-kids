@@ -41,7 +41,7 @@ const (
 )
 
 type Admin struct {
-	Id               uint           `db:"admin_id"`
+	Id               uint32         `db:"admin_id"`
 	AdminName        string         `db:"admin_name"`
 	HashPassword     string         `db:"hash_password"`
 	Salt             string         `db:"pwd_salt"`
@@ -49,7 +49,7 @@ type Admin struct {
 	UserName         sql.NullString `db:"user_name"` // relate to User#UserName if necessary
 	EmpName          sql.NullString `db:"emp_name"`
 	EmpNo            sql.NullString `db:"emp_no"`
-	CreatedById      uint           `db:"created_by_id"`
+	CreatedById      uint32         `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
@@ -63,10 +63,44 @@ type Admin struct {
 	Roles        []*Role `db:"-" json:",omitempty"`
 }
 
+func (a *Admin) UpdateBy(admin *Admin) *Admin {
+	if len(admin.AdminName) > 0 {
+		a.AdminName = admin.AdminName
+	}
+	if len(admin.HashPassword) > 0 && len(admin.Salt) > 0 {
+		a.HashPassword = admin.HashPassword
+		a.Salt = admin.Salt
+	}
+	if admin.EmpName.Valid {
+		a.EmpName = admin.EmpName
+	}
+	if admin.EmpNo.Valid {
+		a.EmpNo = admin.EmpNo
+	}
+	a.IsEnabled = admin.IsEnabled
+	if admin.LastIp.Valid {
+		a.LastIp = admin.LastIp
+	}
+	return a
+}
+
+func (a *Admin) CreatedBy(id uint32, name string) *Admin {
+	if id > 0 && len(name) > 0 {
+		a.CreatedById = id
+		a.CreatedByName.Scan(name)
+	}
+	return a
+}
+
 func (a *Admin) PreInsert(_ gorp.SqlExecutor) error {
 	timeNow := time.Now()
-	a.CreatedTime = mysql.NullTime{timeNow, true}
-	a.LastModifiedTime = mysql.NullTime{timeNow, true}
+	a.CreatedTime.Scan(timeNow)
+	a.LastModifiedTime.Scan(timeNow)
+	return nil
+}
+
+func (a *Admin) PreUpdate(_ gorp.SqlExecutor) error {
+	a.LastModifiedTime.Scan(time.Now())
 	return nil
 }
 
@@ -124,11 +158,11 @@ const (
 
 // mapped table
 type Role struct {
-	Id               uint           `db:"role_id"`
+	Id               uint32         `db:"role_id"`
 	Code             string         `db:"role_code"`
 	Name             string         `db:"role_name"`
 	Desc             sql.NullString `db:"role_desc"`
-	CreatedById      uint           `db:"created_by_id"`
+	CreatedById      uint32         `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
@@ -193,15 +227,15 @@ const (
 )
 
 type Resource struct {
-	Id               uint           `db:"res_id"`
+	Id               uint32         `db:"res_id"`
 	Name             string         `db:"res_name"`
 	Code             string         `db:"res_code"`
 	Desc             sql.NullString `db:"res_desc"`
 	Url              string         `db:"res_url"`
-	TopId            uint           `db:"top_id"`
-	ParentId         uint           `db:"parent_id"`
+	TopId            uint32         `db:"top_id"`
+	ParentId         uint32         `db:"parent_id"`
 	IsMenu           bool           `db:"is_menu"`
-	CreatedById      uint           `db:"created_by_id"`
+	CreatedById      uint32         `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
