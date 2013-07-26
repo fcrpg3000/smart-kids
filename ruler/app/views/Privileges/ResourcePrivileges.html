@@ -1,0 +1,52 @@
+{{template "header.html" .}}{{template "flash.html" .}}
+<ul class="breadcrumb">
+  <li><a href="{{url "Application.Index"}}">首页</a> <span class="divider">/</span></li>
+  <li>系统权限管理 <span class="divider">/</span></li>
+  <li class="active">{{.title}}</li>
+</ul>
+
+<div>
+  <h3>"{{.role.Name}}"的资源设置</h3>
+  <form name="formResPrivilege" id="form_res_privilege" action="/privilege/a/assign_privileges" method="post" class="form-inline">
+  <input type="hidden" name="roleId" value="{{.role.Id}}" />
+  <table class="table table-hover table-bordered">
+  <tr>
+  	<th class="w150">
+  	  <label for="ch_res_all" class="checkbox">
+  	  	<input type="checkbox" id="ch_res_all" />
+  	  	主资源
+  	  </label>
+  	</th>
+  	<th>子资源</th>
+  </tr>
+  <tbody>{{range .mainResources}}
+  <tr>
+  	<td>
+  	  {{$mainId := .Id}}
+  	  <label for="ch_res_{{.Id}}" class="checkbox">
+  		<input type="checkbox" id="ch_res_{{.Id}}" name="mainResource" value="{{.Id}}" data-sub-name="subResource{{$mainId}}" />
+  		{{.Name}}{{if .IsMenu}}<span class="text-info">(菜单)</span>{{end}}
+  	  </label>
+    </td>
+  	<td>{{range .Children}}
+  	  <label for="ch_res_{{.Id}}" class="checkbox">
+  	  	<input type="checkbox" id="ch_res_{{.Id}}" name="subResource{{$mainId}}" value="{{.Id}}" data-parent="#ch_res_{{$mainId}}" />
+  	  	{{.Name}}{{if .IsMenu}}<span class="text-info">(菜单)</span>{{end}}
+  	  </label>&nbsp;&nbsp;{{end}}
+  	</td>
+  </tr>{{end}}
+  <tr>
+  	<td></td>
+  	<td>
+  	  <input type="submit" id="btn_save" class="btn btn-primary" value="保 存" />
+  	  &nbsp;&nbsp;
+  	  <input type="reset" class="btn" id="btn_reset" value="重 置" />
+  	</td>
+  </tr>
+  </tbody>
+  </table>
+  </form>
+</div>
+
+{{append . "moreScripts" "js/privilege/privilege.js"}}
+{{template "footer.html" .}}

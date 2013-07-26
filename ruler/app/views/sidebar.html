@@ -1,7 +1,9 @@
+  {{$CurrMenuId := .CurrMenuId}}
   <div class="well sidebar-nav">
     <ul class="nav nav-list">{{range .mainMenus}}
       <li class="nav-header">{{.Name}}</li>
-      {{range .Children}}<li><a href="{{.Url}}">{{.Name}}</a></li>{{end}}
+      {{range .Children}}<li{{if eq $CurrMenuId .Id}} class="active"{{end}}><a href="{{.Url}}">{{.Name}}</a></li>
+      {{end}}
       {{end}}
     </ul>
   </div>{{/*--/.well.sidebar-nav--*/}}

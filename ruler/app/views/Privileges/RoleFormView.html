@@ -1,0 +1,78 @@
+{{template "header.html" .}}{{template "flash.html" .}}
+<ul class="breadcrumb">
+  <li><a href="{{url "Application.Index"}}">首页</a> <span class="divider">/</span></li>
+  <li>系统权限管理 <span class="divider">/</span></li>
+  <li class="active">{{.title}}</li>
+</ul>
+
+<div>
+{{set . "formAction" "/privilege/a/add_role"}}
+{{if .role}}{{set . "formAction" "/privilege/a/modify_role"}}{{end}}
+  <form class="form-horizontal" id="form_edit_role" name="formEditRole" action="{{.formAction}}" method="post">
+    {{if .role}}<input type="hidden" id="txt_role_id" name="role.Id" value="{{.role.Id}}" />{{end}}
+    <p id="message_tip" class="hide"></p>
+    <div class="control-group">
+      <label class="control-label" for="txt_role_name">角色名称：</label>
+      <div class="controls">
+        <input type="text" id="txt_role_name" name="role.Name" placeholder="角色名称" value="{{if .role}}{{.role.Name}}{{end}}">
+        <span class="help-inline hide" id="help_role_name" data-src-content="请输入角色名称！">请输入角色名称！</span>
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="txt_role_code">角色标识：</label>
+      <div class="controls">
+        <input type="text" id="txt_role_code" name="role.Code" placeholder="编码标识" value="{{if .role}}{{.role.Code}}{{end}}">
+        <span class="help-inline" id="help_role_code" data-src-content="例如：系统管理员：ROLE_ADMIN">例如：系统管理员：ROLE_ADMIN</span>
+      </div>
+    </div>
+    
+    <div class="control-group">
+      <label class="control-label" for="txt_role_desc">角色描述：</label>
+      <div class="controls">
+        <textarea id="txt_role_desc" name="role.DescValue" placeholder="角色描述" rows="3">{{if .role}}{{.role.Desc.String}}{{end}}</textarea>
+        <span class="help-inline" id="help_role_desc" data-src-content="请输入角色描述！">请输入角色描述！</span>
+      </div>
+    </div>
+    
+    <div class="control-group">
+      <div class="controls">
+        {{set . "isEnabled" false}}
+        {{if .role}}{{if .role.IsEnabled}}{{set . "isEnabled" true}}{{end}}
+        {{else}} {{set . "isEnabled" true}} {{end}}
+        <input type="hidden" id="txt_is_enabled" name="role.IsEnabled" value="{{.isEnabled}}" />
+        <label class="checkbox">
+            <input type="checkbox" id="chk_is_enabled"{{if .isEnabled}} checked="checked"{{end}}/> 是否可用
+        </label>
+       
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="controls">
+        <button type="submit" id="btn_save" class="btn btn-primary">保 存</button>&nbsp;&nbsp;
+        <button type="reset" id="btn_reset" class="btn">重 置</button>
+            &nbsp;&nbsp;
+        <a href="/privilege/role_list" class="btn btn-info"><i class="icon-list-alt"></i> 返回角色列表</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div id="modal_del_role" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+  <form id="form_del_role" name="formDelRole" action="/privilege/a/del_role" method="post">
+  <input type="hidden" id="txt_role_id" name="roleId" />
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3>【系统提示】</h3>
+  </div>
+  <div class="modal-body">
+    <p></p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-warning" id="btn_del_role" type="button">确认删除</button>
+    <button class="btn" data-dismiss="modal" aria-hidden="true">取消</button>
+  </div>
+  </form>
+</div>
+
+{{append . "moreScripts" "js/privilege/role-form.js"}}
+{{template "footer.html" .}}

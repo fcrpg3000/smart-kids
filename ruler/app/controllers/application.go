@@ -185,12 +185,16 @@ func (c Application) AddMenus() revel.Result {
 	}
 
 	for _, subMenu := range subMenus {
+		if strings.Index(c.Request.RequestURI, subMenu.Url) >= 0 {
+			c.RenderArgs["CurrMenuId"] = subMenu.Id
+		}
 		if idx, ok := idIdxMap[subMenu.ParentId]; ok {
 			children := mainMenus[idx].Children
 			children = append(children, subMenu)
 			mainMenus[idx].Children = children
 		}
 	}
+	// c.RenderArgs["RequestURI"] = c.Request.RequestURI
 	c.RenderArgs["mainMenus"] = mainMenus
 	return nil
 }

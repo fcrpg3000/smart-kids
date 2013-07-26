@@ -9,6 +9,6 @@
 <script src="/public/js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
 <script src="/public/js/jquery-form.min.js" type="text/javascript" charset="utf-8"></script>
 {{range .moreScripts}}<script src="/public/{{.}}" type="text/javascript" charset="utf-8"></script>{{end}}
-{{with .pageScripts}}{{.}}{{end}}
+{{template "pageScripts" .}}
 </body>
 </html>

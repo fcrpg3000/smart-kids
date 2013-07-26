@@ -165,27 +165,46 @@ type Role struct {
 	CreatedById      uint32         `db:"created_by_id"`
 	CreatedByName    sql.NullString `db:"created_by_name"`
 	CreatedTime      mysql.NullTime `db:"created_time"`
+	IsEnabled        bool           `db:"is_enabled"`
 	LastModifiedTime mysql.NullTime `db:"last_modified_time"`
 
 	// Transient
 	// Relation manage by Role
 	Resources []*Resource `db:"-" json:",omitempty"`
+	DescValue string      `db:"-"`
+}
+
+func (r *Role) CreatedBy(admin *Admin) *Role {
+	if admin != nil {
+		r.CreatedById = admin.Id
+		r.CreatedByName.Scan(admin.AdminName)
+	}
+	return r
+}
+
+func (r *Role) UpdateBy(role *Role) *Role {
+	r.Desc.Scan(role.DescValue)
+	r.Code = role.Code
+	r.Name = role.Name
+	r.IsEnabled = role.IsEnabled
+	return r
 }
 
 // gorp Hook pre-Insert
 func (r *Role) PreInsert(_ gorp.SqlExecutor) error {
 	timeNow := time.Now()
 	if !r.Desc.Valid {
-		r.Desc = sql.NullString{"<暂无描述>", true}
+		r.Desc.Scan("<暂无描述>")
 	}
-	r.CreatedTime = mysql.NullTime{timeNow, true}
-	r.LastModifiedTime = mysql.NullTime{timeNow, true}
+	r.Desc.Scan(r.DescValue)
+	r.CreatedTime.Scan(timeNow)
+	r.LastModifiedTime.Scan(timeNow)
 	return nil
 }
 
 // gorp Hook pre-Update
 func (r *Role) PreUpdate(_ gorp.SqlExecutor) error {
-	r.LastModifiedTime = mysql.NullTime{time.Now(), true}
+	r.LastModifiedTime.Scan(time.Now())
 	return nil
 }
 

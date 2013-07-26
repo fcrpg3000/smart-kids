@@ -10,39 +10,42 @@
   <table class="table table-hover">
   <tr>
   	<th>#</th>
-  	<th>名称</th>
-  	<th>Code</th>
-  	<th>URL</th>
-  	<th>属于菜单</th>
-    <th>创建者</th>
-  	<th>创建时间</th>
-  	<th>最后修改</th>
-  	<th>操作</th>
+    <th>角色名称</th>
+    <th class="w300">描述</th>
+    <th>角色代码</th>
+    <th>是否可用</th>
+    <th>添加者</th>
+    <th>添加日期</th>
+    <th>最后修改</th>
+    <th>操作</th>
   </tr>
-  <tbody>{{range .pageResource.Content}}
+  <tbody>{{range .pageRole.Content}}
   <tr>
   	<td>{{.Id}}</td>
   	<td>{{.Name}}</td>
+  	<td>{{.Desc.String}}</td>
   	<td>{{.Code}}</td>
-  	<td>{{.Url}}</td>
-  	<td>{{if .IsMenu}}是{{else}}否{{end}}</td>
+  	<td>{{if .IsEnabled}}是{{else}}否{{end}}</td>
   	<td>{{if gt .CreatedById 0}}<a href="#">{{.CreatedByName.String}}</a>{{else}}(系统){{end}}</td>
   	<td><span title="{{.CreatedTime.Time.Format "2006-01-02 15:04"}}">{{.CreatedTime.Time.Format "2006-01-02"}}</span></td>
   	<td><span title="{{.LastModifiedTime.Time.Format "2006-01-02 15:04"}}">{{.LastModifiedTime.Time.Format "2006-01-02"}}</span></td>
   	<td>
       <div class="btn-group">
-        <a href="{{url "Privileges.ResourceEdit" .Id}}" class="btn btn-info"><i class="icon-edit"></i> 编辑</a>
-        <a href="javascript:void(0)" class="btn btn-danger" onclick="return resPreDelete({{.Id}},'{{.Name}}');"><i class="icon-remove"></i> 删除</a>
+        <a href="{{url "Privileges.ResourcePrivileges" .Id}}" class="btn btn-danger"><i class="icon-th-list"></i> 分配资源</a>
+        <a href="{{url "Privileges.RoleFormView" .Id}}" class="btn btn-info"><i class="icon-edit"></i> 编辑</a>
+        <a href="javascript:void(0)" class="btn btn-danger" onclick="return deleteRole({{.Id}},'{{.Name}}');"><i class="icon-remove"></i> 删除</a>
       </div>
     </td>
   </tr>{{end}}
   </tbody>
   </table>
-  {{set . "pagination" .pageResource}} {{set . "paginationAlign" "centered"}} {{set . "pageUrl" "/privilege/res_list/%d"}}
+  {{set . "pagination" .pageRole}} {{set . "paginationAlign" "centered"}} {{set . "pageUrl" "/privilege/role_list/%d"}}
   {{template "pagination.html" .}}
 </div>
 
-<div id="modal_del_res" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+<div id="modal_del_role" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+  <form id="form_del_role" name="formDelRole" action="/privilege/a/del_role" method="post">
+  <input type="hidden" id="txt_role_id" name="id" />
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
     <h3>【系统提示】</h3>
@@ -51,10 +54,11 @@
     <p></p>
   </div>
   <div class="modal-footer">
-    <button class="btn btn-warning" id="btn_del_res">确认删除</button>
+    <button class="btn btn-warning" id="btn_del_role" type="button">确认删除</button>
     <button class="btn" data-dismiss="modal" aria-hidden="true">取消</button>
   </div>
+  </form>
 </div>
 
-{{append . "moreScripts" "js/privilege/res-list.js"}}
+{{append . "moreScripts" "js/privilege/role-list.js"}}
 {{template "footer.html" .}}

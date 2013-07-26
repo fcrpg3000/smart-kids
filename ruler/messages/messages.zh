@@ -53,5 +53,10 @@ resource.title.list=权限资源列表
 resource.error.saved=保存权限资源信息失败，原因：%s！
 resource.success.saved=权限资源信息（%s）保存成功！
 
+# role module title
+role.title.list=管理员角色列表
+role.title.addition=添加新的管理员角色
+role.title.modification=修改管理员角色信息
+
 App.title.list=应用列表
 App.title.detail=应用详细信息

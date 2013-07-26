@@ -5,8 +5,8 @@
   <li><a href="{{url "Privileges.ResourceList"}}">管理权限资源</a> <span class="divider">/</span></li>
   <li class="active">{{.title}}</li>
 </ul>
-{{set . "formAction" "/privilege/add_res"}}
-{{if .res}}{{set . "formAction" "/privilege/modify_res"}}{{end}}
+{{set . "formAction" "/privilege/a/add_res"}}
+{{if .res}}{{set . "formAction" "/privilege/a/modify_res"}}{{end}}
 <div>
   <form class="form-horizontal" id="form_edit_res" name="formEditRes" action="{{.formAction}}" method="post">
       {{if .res}}<input type="hidden" id="txt_res_id" name="res.Id" value="{{.res.Id}}" />{{end}}

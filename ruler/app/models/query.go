@@ -44,7 +44,7 @@ const (
 		"created_by_name, created_time, last_modified_time, " +
 		"is_enabled, last_ip FROM m_admin "
 	BASE_QUERY_ROLE = "SELECT role_id, role_name, role_code, role_desc, created_by_id, " +
-		"created_by_name, created_time, last_modified_time FROM m_role "
+		"created_by_name, is_enabled, created_time, last_modified_time FROM m_role "
 	BASE_QUERY_RESOURCE = "SELECT res_id, res_name, res_code, res_desc, res_url, " +
 		"parent_id, top_id, is_menu, created_by_id, created_by_name, created_time, " +
 		"last_modified_time FROM m_resource "

@@ -26,10 +26,21 @@ POST    /admins/passwd                          Administrators.Passwd
 GET     /privilege/res_list                     Privileges.ResourceList
 GET     /privilege/res_list/:p                  Privileges.ResourceList
 GET     /privilege/res_list/:p/:ps              Privileges.ResourceList
-GET     /privilege/res_new                      Privileges.ResourceEdit
-GET     /privilege/res_edit/:id                 Privileges.ResourceEdit
-POST    /privilege/modify_res                   Privileges.SaveResource
-POST    /privilege/add_res                      Privileges.SaveResource
+GET     /privilege/modify_res/:id               Privileges.ResourceEdit
+POST    /privilege/a/modify_res                 Privileges.SaveResource
+GET     /privilege/add_res                      Privileges.ResourceEdit
+POST    /privilege/a/add_res                    Privileges.SaveResource
+POST    /privilege/a/del_res                    Privileges.DeleteResource
+GET     /privilege/role_list                    Privileges.RoleList
+GET     /privilege/role_list/:p                 Privileges.RoleList
+GET     /privilege/role_list/:ps/:p             Privileges.RoleList
+GET     /privilege/add_role                     Privileges.RoleFormView
+GET     /privilege/modify_role/:id              Privileges.RoleFormView
+POST    /privilege/a/add_role                   Privileges.SaveRole
+POST    /privilege/a/modify_role                Privileges.SaveRole
+POST    /privilege/a/del_role                   Privileges.DeleteRole
+GET     /privilege/res_privileges/:rid          Privileges.ResourcePrivileges
+POST    /privilege/a/assign_privileges          Privileges.SavePrivileges
 
 # Apps
 GET     /app/list                               AppController.AppList
